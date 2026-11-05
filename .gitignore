@@ -1,0 +1,41 @@
+# Build output
+/build/bin/
+/frontend/dist/
+/frontend/package.json.md5
+/.bin/
+
+# Frontend dependencies
+/frontend/node_modules/
+
+# Local runtime data: never commit patient data, databases, logs or exports
+/data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+/backups/
+/exports/
+application.log
+pre-restore-*.db
+failed-restore-*.db
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Test and coverage output
+/coverage/
+*.out
+*.test
+*.prof
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
