@@ -15,6 +15,7 @@ import (
 
 	"vaccineshit/internal/publicapi"
 	"vaccineshit/internal/publishing"
+	"vaccineshit/internal/service"
 )
 
 const testPublisherToken = "test-publisher-token-0123456789"
@@ -34,6 +35,9 @@ func newTestApp(t *testing.T) *App {
 	t.Cleanup(func() { app.Shutdown(context.Background()) })
 	app.now = func() time.Time { return time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC) }
 	app.credentials = publishing.NewCredentialsForTest(failingKeyring{}, publishing.DefaultFallbackPath(app.dataDir))
+	if _, err := app.Login(service.DefaultAdminUsername, service.DefaultAdminPassword); err != nil {
+		t.Fatalf("login seeded operator: %v", err)
+	}
 	return app
 }
 
@@ -123,6 +127,64 @@ func TestUsageRequiresInitializedOpenMonthAndStock(t *testing.T) {
 		PatientID: patient.EntityID, VaccineID: vaccine.EntityID,
 		AdministeredOn: "2026-11-04", Quantity: 1,
 	}))
+}
+
+func TestAppointmentCompletionFlowsIntoStockAndPatientFile(t *testing.T) {
+	app := newTestApp(t)
+	vaccine := app.CreateVaccine(VaccineInputDTO{Name: "Hepatitis B", Code: "HEPB", Unit: "dose"})
+	mustOK(t, vaccine)
+	patient := app.CreatePatient(PatientInputDTO{FullName: "Katherine Johnson", PatientCode: "P-042"})
+	mustOK(t, patient)
+	mustOK(t, app.InitializeInventory(InitializeInventoryInputDTO{
+		VaccineID: vaccine.EntityID, Month: "2026-11", OpeningBalance: 10,
+	}))
+
+	created := app.CreateAppointment(AppointmentInputDTO{
+		PatientID:   patient.EntityID,
+		ScheduledOn: "2026-11-20", ScheduledTime: "09:30", Note: "second dose",
+		Items: []AppointmentItemInputDTO{{VaccineID: vaccine.EntityID, Quantity: 2}},
+	})
+	mustOK(t, created)
+
+	before, err := app.PatientDetail(patient.EntityID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.Summary.TotalDoses != 2 || before.Summary.ScheduledAppointments != 1 || len(before.Usage) != 1 {
+		t.Fatalf("detail before completion = %+v", before)
+	}
+	if len(before.Appointments) != 1 || before.Appointments[0].Status != "scheduled" {
+		t.Fatalf("appointments before completion = %+v", before.Appointments)
+	}
+
+	completed := app.CompleteAppointment(CompleteAppointmentInputDTO{ID: created.EntityID, AdministeredOn: "2026-11-20"})
+	mustOK(t, completed)
+	retry := app.CompleteAppointment(CompleteAppointmentInputDTO{ID: created.EntityID, AdministeredOn: "2026-11-20"})
+	if retry.OK || retry.Code != "conflict" {
+		t.Fatalf("duplicate completion = %+v", retry)
+	}
+
+	after, err := app.PatientDetail(patient.EntityID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Summary.TotalDoses != 2 || after.Summary.VaccineCount != 1 || after.Summary.ScheduledAppointments != 0 || after.Summary.CompletedAppointments != 1 {
+		t.Fatalf("detail after completion = %+v", after.Summary)
+	}
+	if len(after.Usage) != 1 || after.Usage[0].Quantity != 2 || after.Usage[0].AdministeredOn != "2026-11-20" {
+		t.Fatalf("usage after completion = %+v", after.Usage)
+	}
+	if len(after.Appointments) != 1 || len(after.Appointments[0].Items) != 1 || after.Appointments[0].Items[0].UsageEntryID != after.Usage[0].ID || after.Appointments[0].Items[0].UsageQuantity != 2 {
+		t.Fatalf("appointment usage link = %+v", after.Appointments)
+	}
+
+	overview, err := app.MonthOverview("2026-11")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.Totals.UsageTotal != 2 || overview.Totals.Remaining != 8 {
+		t.Fatalf("month totals after completion = %+v", overview.Totals)
+	}
 }
 
 func TestAggregatePrivacyAndPublicationFlow(t *testing.T) {
@@ -268,6 +330,9 @@ func TestBackupAndRestoreRoundTrip(t *testing.T) {
 	if !restored.OK {
 		t.Fatalf("restore = %+v", restored)
 	}
+	if _, err := app.Login(service.DefaultAdminUsername, service.DefaultAdminPassword); err != nil {
+		t.Fatalf("login after restore: %v", err)
+	}
 	after, err := app.ListVaccines(false)
 	if err != nil {
 		t.Fatal(err)
@@ -305,6 +370,9 @@ func TestRestoreRecoversFromUnopenableDatabase(t *testing.T) {
 	}
 	if !broken.Bootstrap().Ready {
 		t.Fatal("app is not ready after recovery")
+	}
+	if _, err := broken.Login(service.DefaultAdminUsername, service.DefaultAdminPassword); err != nil {
+		t.Fatalf("login after recovery: %v", err)
 	}
 	items, err := broken.ListVaccines(false)
 	if err != nil || len(items) != 1 || items[0].Name != "Polio" {

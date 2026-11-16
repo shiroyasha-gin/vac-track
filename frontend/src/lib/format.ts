@@ -41,6 +41,14 @@ const timestampFormat = new Intl.DateTimeFormat(locale, {
   numberingSystem,
 });
 
+const timeFormat = new Intl.DateTimeFormat(locale, {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+  calendar: 'gregory',
+  numberingSystem,
+});
+
 export function formatInteger(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '—';
@@ -59,12 +67,18 @@ export function formatPercent(value: number): string {
   return `${percentFormat.format(value)}٪`;
 }
 
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
 }
 
 export function currentMonth(): string {
-  return new Date().toISOString().slice(0, 7);
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
 }
 
 export function parseMonth(month: string): { year: number; month: number } {
@@ -77,7 +91,7 @@ export function monthLabel(month: string): string {
     return month;
   }
   const { year, month: monthNumber } = parseMonth(month);
-  return monthFormat.format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+  return monthFormat.format(new Date(year, monthNumber - 1, 1));
 }
 
 export function monthLabelShort(month: string): string {
@@ -85,7 +99,7 @@ export function monthLabelShort(month: string): string {
     return month;
   }
   const { year, month: monthNumber } = parseMonth(month);
-  return shortMonthFormat.format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+  return shortMonthFormat.format(new Date(year, monthNumber - 1, 1));
 }
 
 export function shiftMonth(month: string, delta: number): string {
@@ -107,7 +121,16 @@ export function formatDate(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return value || '—';
   }
-  return dateFormat.format(new Date(`${value}T00:00:00Z`));
+  const [year, monthNumber, day] = value.split('-').map(Number);
+  return dateFormat.format(new Date(year, monthNumber - 1, day));
+}
+
+export function formatTime(value: string): string {
+  if (!/^\d{2}:\d{2}$/.test(value)) {
+    return value || '—';
+  }
+  const [hour, minute] = value.split(':').map(Number);
+  return timeFormat.format(new Date(2000, 0, 1, hour, minute));
 }
 
 export function formatTimestamp(value: string): string {

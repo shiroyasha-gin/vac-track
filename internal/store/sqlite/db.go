@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -97,6 +98,13 @@ func Open(ctx context.Context, cfg Config) (*DB, error) {
 }
 
 func dataSourceName(path string, busyTimeout time.Duration) string {
+	// SQLite reads the part before the first slash as a URI authority. A
+	// Windows drive path such as C:/data/app.db must become file:///C:/...,
+	// otherwise the driver fails with "invalid uri authority: C:".
+	path = strings.ReplaceAll(filepath.ToSlash(path), `\`, "/")
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
 	u := &url.URL{Scheme: "file", Path: path}
 	q := u.Query()
 	// modernc.org/sqlite supports repeatable _pragma values. Foreign keys are

@@ -66,6 +66,172 @@ export namespace app {
 	        this.reason = source["reason"];
 	    }
 	}
+	export class AppointmentItemDTO {
+	    id: number;
+	    vaccineId: number;
+	    vaccineName: string;
+	    vaccineCode: string;
+	    vaccineUnit: string;
+	    vaccineArchived: boolean;
+	    quantity: number;
+	    usageEntryId: number;
+	    usageVoided: boolean;
+	    usageVoidReason: string;
+	    usageAdministeredOn: string;
+	    usageQuantity: number;
+	    createdAt: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppointmentItemDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.vaccineId = source["vaccineId"];
+	        this.vaccineName = source["vaccineName"];
+	        this.vaccineCode = source["vaccineCode"];
+	        this.vaccineUnit = source["vaccineUnit"];
+	        this.vaccineArchived = source["vaccineArchived"];
+	        this.quantity = source["quantity"];
+	        this.usageEntryId = source["usageEntryId"];
+	        this.usageVoided = source["usageVoided"];
+	        this.usageVoidReason = source["usageVoidReason"];
+	        this.usageAdministeredOn = source["usageAdministeredOn"];
+	        this.usageQuantity = source["usageQuantity"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+	export class AppointmentDTO {
+	    id: number;
+	    patientId: number;
+	    patientName: string;
+	    patientCode: string;
+	    patientArchived: boolean;
+	    items: AppointmentItemDTO[];
+	    scheduledOn: string;
+	    scheduledTime: string;
+	    note: string;
+	    status: string;
+	    cancelReason: string;
+	    completedAt: string;
+	    cancelledAt: string;
+	    createdAt: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppointmentDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.patientId = source["patientId"];
+	        this.patientName = source["patientName"];
+	        this.patientCode = source["patientCode"];
+	        this.patientArchived = source["patientArchived"];
+	        this.items = this.convertValues(source["items"], AppointmentItemDTO);
+	        this.scheduledOn = source["scheduledOn"];
+	        this.scheduledTime = source["scheduledTime"];
+	        this.note = source["note"];
+	        this.status = source["status"];
+	        this.cancelReason = source["cancelReason"];
+	        this.completedAt = source["completedAt"];
+	        this.cancelledAt = source["cancelledAt"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class AppointmentFilterDTO {
+	    status: string;
+	    fromDate: string;
+	    toDate: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppointmentFilterDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.fromDate = source["fromDate"];
+	        this.toDate = source["toDate"];
+	    }
+	}
+	export class AppointmentItemInputDTO {
+	    vaccineId: number;
+	    quantity: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppointmentItemInputDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.vaccineId = source["vaccineId"];
+	        this.quantity = source["quantity"];
+	    }
+	}
+	export class AppointmentInputDTO {
+	    patientId: number;
+	    scheduledOn: string;
+	    scheduledTime: string;
+	    note: string;
+	    items: AppointmentItemInputDTO[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AppointmentInputDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.patientId = source["patientId"];
+	        this.scheduledOn = source["scheduledOn"];
+	        this.scheduledTime = source["scheduledTime"];
+	        this.note = source["note"];
+	        this.items = this.convertValues(source["items"], AppointmentItemInputDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
 	export class AuditEventDTO {
 	    id: number;
 	    eventType: string;
@@ -142,6 +308,59 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class AuthUserDTO {
+	    id: number;
+	    username: string;
+	    displayName: string;
+	    role: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuthUserDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.username = source["username"];
+	        this.displayName = source["displayName"];
+	        this.role = source["role"];
+	    }
+	}
+	export class AuthStateDTO {
+	    authenticated: boolean;
+	    usingDefaultPassword: boolean;
+	    user?: AuthUserDTO;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuthStateDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.authenticated = source["authenticated"];
+	        this.usingDefaultPassword = source["usingDefaultPassword"];
+	        this.user = this.convertValues(source["user"], AuthUserDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class BackupResultDTO {
 	    ok: boolean;
 	    code: string;
@@ -198,6 +417,34 @@ export namespace app {
 	        this.publisherTokenStorage = source["publisherTokenStorage"];
 	    }
 	}
+	export class CancelAppointmentInputDTO {
+	    id: number;
+	    reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CancelAppointmentInputDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.reason = source["reason"];
+	    }
+	}
+	export class CompleteAppointmentInputDTO {
+	    id: number;
+	    administeredOn: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CompleteAppointmentInputDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.administeredOn = source["administeredOn"];
+	    }
+	}
 	export class CreateUsageInputDTO {
 	    patientId: number;
 	    vaccineId: number;
@@ -216,6 +463,24 @@ export namespace app {
 	        this.administeredOn = source["administeredOn"];
 	        this.quantity = source["quantity"];
 	        this.note = source["note"];
+	    }
+	}
+	export class CreateUserInputDTO {
+	    username: string;
+	    displayName: string;
+	    password: string;
+	    role: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CreateUserInputDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.username = source["username"];
+	        this.displayName = source["displayName"];
+	        this.password = source["password"];
+	        this.role = source["role"];
 	    }
 	}
 	export class DailyTotalDTO {
@@ -327,6 +592,24 @@ export namespace app {
 		}
 	}
 	
+	export class InitializeDatabaseResultDTO {
+	    ok: boolean;
+	    code: string;
+	    message: string;
+	    preservedPath?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InitializeDatabaseResultDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.code = source["code"];
+	        this.message = source["message"];
+	        this.preservedPath = source["preservedPath"];
+	    }
+	}
 	export class InitializeInventoryInputDTO {
 	    vaccineId: number;
 	    month: string;
@@ -585,6 +868,108 @@ export namespace app {
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}
+	export class UsageRowDTO {
+	    id: number;
+	    patientId: number;
+	    vaccineId: number;
+	    administeredOn: string;
+	    month: string;
+	    quantity: number;
+	    note: string;
+	    voided: boolean;
+	    voidReason: string;
+	    createdAt: string;
+	    updatedAt: string;
+	    patientName: string;
+	    patientCode: string;
+	    patientArchived: boolean;
+	    vaccineName: string;
+	    vaccineCode: string;
+	    vaccineUnit: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UsageRowDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.patientId = source["patientId"];
+	        this.vaccineId = source["vaccineId"];
+	        this.administeredOn = source["administeredOn"];
+	        this.month = source["month"];
+	        this.quantity = source["quantity"];
+	        this.note = source["note"];
+	        this.voided = source["voided"];
+	        this.voidReason = source["voidReason"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	        this.patientName = source["patientName"];
+	        this.patientCode = source["patientCode"];
+	        this.patientArchived = source["patientArchived"];
+	        this.vaccineName = source["vaccineName"];
+	        this.vaccineCode = source["vaccineCode"];
+	        this.vaccineUnit = source["vaccineUnit"];
+	    }
+	}
+	export class PatientSummaryDTO {
+	    totalDoses: number;
+	    vaccineCount: number;
+	    lastDoseOn: string;
+	    scheduledAppointments: number;
+	    nextAppointmentOn: string;
+	    completedAppointments: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PatientSummaryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalDoses = source["totalDoses"];
+	        this.vaccineCount = source["vaccineCount"];
+	        this.lastDoseOn = source["lastDoseOn"];
+	        this.scheduledAppointments = source["scheduledAppointments"];
+	        this.nextAppointmentOn = source["nextAppointmentOn"];
+	        this.completedAppointments = source["completedAppointments"];
+	    }
+	}
+	export class PatientDetailDTO {
+	    patient: PatientDTO;
+	    summary: PatientSummaryDTO;
+	    usage: UsageRowDTO[];
+	    appointments: AppointmentDTO[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PatientDetailDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.patient = this.convertValues(source["patient"], PatientDTO);
+	        this.summary = this.convertValues(source["summary"], PatientSummaryDTO);
+	        this.usage = this.convertValues(source["usage"], UsageRowDTO);
+	        this.appointments = this.convertValues(source["appointments"], AppointmentDTO);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class PatientInputDTO {
 	    fullName: string;
 	    patientCode: string;
@@ -599,6 +984,43 @@ export namespace app {
 	        this.patientCode = source["patientCode"];
 	    }
 	}
+	export class PatientPageDTO {
+	    items: PatientDTO[];
+	    total: number;
+	    limit: number;
+	    offset: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PatientPageDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.items = this.convertValues(source["items"], PatientDTO);
+	        this.total = source["total"];
+	        this.limit = source["limit"];
+	        this.offset = source["offset"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class PublicationPreviewDTO {
 	    month: string;
 	    monthState: string;
@@ -759,6 +1181,46 @@ export namespace app {
 	        this.backupDir = source["backupDir"];
 	    }
 	}
+	export class UpdateAppointmentInputDTO {
+	    patientId: number;
+	    scheduledOn: string;
+	    scheduledTime: string;
+	    note: string;
+	    items: AppointmentItemInputDTO[];
+	    reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateAppointmentInputDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.patientId = source["patientId"];
+	        this.scheduledOn = source["scheduledOn"];
+	        this.scheduledTime = source["scheduledTime"];
+	        this.note = source["note"];
+	        this.items = this.convertValues(source["items"], AppointmentItemInputDTO);
+	        this.reason = source["reason"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class UpdateInventoryInputDTO {
 	    vaccineId: number;
 	    month: string;
@@ -801,6 +1263,22 @@ export namespace app {
 	        this.reason = source["reason"];
 	    }
 	}
+	export class UpdateUserInputDTO {
+	    displayName: string;
+	    role: string;
+	    active: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateUserInputDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.displayName = source["displayName"];
+	        this.role = source["role"];
+	        this.active = source["active"];
+	    }
+	}
 	export class UsageEntryDTO {
 	    id: number;
 	    patientId: number;
@@ -833,48 +1311,29 @@ export namespace app {
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}
-	export class UsageRowDTO {
+	
+	export class UserDTO {
 	    id: number;
-	    patientId: number;
-	    vaccineId: number;
-	    administeredOn: string;
-	    month: string;
-	    quantity: number;
-	    note: string;
-	    voided: boolean;
-	    voidReason: string;
+	    username: string;
+	    displayName: string;
+	    role: string;
+	    active: boolean;
 	    createdAt: string;
 	    updatedAt: string;
-	    patientName: string;
-	    patientCode: string;
-	    patientArchived: boolean;
-	    vaccineName: string;
-	    vaccineCode: string;
-	    vaccineUnit: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new UsageRowDTO(source);
+	        return new UserDTO(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
-	        this.patientId = source["patientId"];
-	        this.vaccineId = source["vaccineId"];
-	        this.administeredOn = source["administeredOn"];
-	        this.month = source["month"];
-	        this.quantity = source["quantity"];
-	        this.note = source["note"];
-	        this.voided = source["voided"];
-	        this.voidReason = source["voidReason"];
+	        this.username = source["username"];
+	        this.displayName = source["displayName"];
+	        this.role = source["role"];
+	        this.active = source["active"];
 	        this.createdAt = source["createdAt"];
 	        this.updatedAt = source["updatedAt"];
-	        this.patientName = source["patientName"];
-	        this.patientCode = source["patientCode"];
-	        this.patientArchived = source["patientArchived"];
-	        this.vaccineName = source["vaccineName"];
-	        this.vaccineCode = source["vaccineCode"];
-	        this.vaccineUnit = source["vaccineUnit"];
 	    }
 	}
 	export class VaccineDTO {

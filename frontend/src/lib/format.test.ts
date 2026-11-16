@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   currentMonth,
   dateInMonth,
   formatInteger,
   formatPercent,
   formatSigned,
+  formatTime,
   initials,
   monthDays,
   monthLabel,
@@ -45,6 +46,34 @@ describe('month helpers', () => {
   });
 });
 
+describe('local calendar dates', () => {
+  it('keeps ISO dates on their own day west of UTC', async () => {
+    const proc = (globalThis as { process?: { env: Record<string, string | undefined> } }).process;
+    if (!proc) {
+      throw new Error('vitest must run in a Node environment');
+    }
+    const originalTZ = proc.env.TZ;
+    proc.env.TZ = 'America/New_York';
+    vi.resetModules();
+    try {
+      const local = await import('./format');
+
+      // A UTC-midnight parse would show the previous day (28 February) here.
+      const label = local.formatDate('2026-03-01');
+      expect(label).toContain('1');
+      expect(label).toContain('مارس');
+      expect(local.monthLabel('2026-03')).toContain('مارس');
+    } finally {
+      if (originalTZ === undefined) {
+        delete proc.env.TZ;
+      } else {
+        proc.env.TZ = originalTZ;
+      }
+      vi.resetModules();
+    }
+  });
+});
+
 describe('formatters', () => {
   it('formats whole numbers and missing values', () => {
     expect(formatInteger(0)).toBe('0');
@@ -56,12 +85,17 @@ describe('formatters', () => {
 
   it('formats signed adjustments', () => {
     expect(formatSigned(5)).toBe('+5');
-    expect(formatSigned(-3)).toBe('-3');
+    expect(formatSigned(-3)).toBe('\u200e-3');
     expect(formatSigned(0)).toBe('0');
   });
 
+  it('formats appointment times and missing values', () => {
+    expect(formatTime('')).toBe('—');
+    expect(formatTime('09:30')).toMatch(/9:30/);
+  });
+
   it('formats percentages and plural labels', () => {
-    expect(formatPercent(12.345)).toBe('12.3%');
+    expect(formatPercent(12.345)).toBe('12.3٪');
     expect(pluralize(1, 'dose')).toBe('dose');
     expect(pluralize(2, 'dose')).toBe('doses');
   });

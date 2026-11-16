@@ -33,7 +33,7 @@ export function useMonth(): MonthApi {
 export function MonthPicker({ compact = false }: { compact?: boolean }) {
   const { month, setMonth } = useMonth();
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-0.5 rounded-lg border border-slate-700/70 bg-slate-950 p-0.5 shadow-sm">
       {!compact ? (
         <IconButton label="الشهر السابق" onClick={() => setMonth(shiftMonth(month, -1))}>
           <ChevronRight className="h-4 w-4" />
@@ -42,13 +42,24 @@ export function MonthPicker({ compact = false }: { compact?: boolean }) {
       <label className="sr-only" htmlFor="global-month">
         شهر المخزون
       </label>
-      <input
-        id="global-month"
-        type="month"
-        value={month}
-        onChange={(event) => setMonth(event.target.value)}
-        className="focus-ring h-8 rounded-lg border border-slate-700/80 bg-slate-950/70 px-2.5 text-[13px] text-slate-100"
-      />
+      <div className="relative">
+        <input
+          id="global-month"
+          type="month"
+          value={month}
+          onChange={(event) => setMonth(event.target.value)}
+          className="month-input-native focus-ring h-7 w-32 rounded-md border-0 bg-transparent ps-2 pe-7 text-[13px] font-medium text-transparent"
+        />
+        {/* The native month control prints the browser's own locale; the
+            overlay keeps the displayed month in Arabic without giving up the
+            native picker. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 start-0 flex w-[calc(100%-1.75rem)] items-center ps-2 text-[13px] font-medium text-slate-100"
+        >
+          {monthLabel(month)}
+        </span>
+      </div>
       {!compact ? (
         <IconButton label="الشهر التالي" onClick={() => setMonth(shiftMonth(month, 1))}>
           <ChevronLeft className="h-4 w-4" />
@@ -57,7 +68,6 @@ export function MonthPicker({ compact = false }: { compact?: boolean }) {
       <Button size="sm" variant="ghost" className="hidden xl:inline-flex" onClick={() => setMonth(currentMonth())}>
         هذا الشهر
       </Button>
-      <span className="sr-only">{monthLabel(month)}</span>
     </div>
   );
 }

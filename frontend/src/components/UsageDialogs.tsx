@@ -9,6 +9,7 @@ import {
 import { formatDate, formatInteger, monthDays, monthLabel, todayISO } from '../lib/format';
 import { useAsync } from '../lib/hooks';
 import { useToast } from './Toast';
+import { PatientPicker, type PatientChoice } from './PatientPicker';
 import {
   Alert,
   Badge,
@@ -19,7 +20,6 @@ import {
   InlineError,
   Input,
   Modal,
-  Select,
   Spinner,
   StatusBadge,
   Textarea,
@@ -275,8 +275,7 @@ interface UsageEditorDialogProps {
 
 export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClose, onSaved }: UsageEditorDialogProps) {
   const { notify } = useToast();
-  const [patients, setPatients] = useState<app.PatientDTO[]>([]);
-  const [patientId, setPatientId] = useState('');
+  const [patient, setPatient] = useState<PatientChoice | null>(null);
   const [administeredOn, setAdministeredOn] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [note, setNote] = useState('');
@@ -290,22 +289,31 @@ export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClos
     }
     setError('');
     setBusy(false);
-    setPatientId(entry ? String(entry.patientId) : '');
+    setPatient(
+      entry
+        ? {
+            id: entry.patientId,
+            fullName: entry.patientName,
+            patientCode: entry.patientCode,
+            archived: entry.patientArchived,
+          }
+        : null,
+    );
     setAdministeredOn(entry?.administeredOn || defaultDate || (todayISO().startsWith(month) ? todayISO() : `${month}-01`));
     setQuantity(entry ? String(entry.quantity) : '1');
     setNote(entry?.note || '');
     setReason('');
-    api
-      .ListActivePatients()
-      .then(setPatients)
-      .catch((cause: unknown) => setError(errorMessage(cause)));
   }, [open, entry, defaultDate, month]);
 
   const isEditing = Boolean(entry);
 
   const submit = async () => {
-    setBusy(true);
     setError('');
+    if (!patient) {
+      setError('اختر مريضاً أولاً.');
+      return;
+    }
+    setBusy(true);
     try {
       const parsedQuantity = Number(quantity);
       if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
@@ -316,7 +324,7 @@ export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClos
         await runAction(
           api.UpdateUsage({
             id: entry.id,
-            patientId: Number(patientId),
+            patientId: patient.id,
             administeredOn,
             quantity: parsedQuantity,
             note,
@@ -331,7 +339,7 @@ export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClos
         }
         await runAction(
           api.CreateUsage({
-            patientId: Number(patientId),
+            patientId: patient.id,
             vaccineId: row.vaccineId,
             administeredOn,
             quantity: parsedQuantity,
@@ -348,7 +356,7 @@ export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClos
     }
   };
 
-  const patientMissing = isEditing && entry && !patients.some((patient) => patient.id === entry.patientId);
+  const patientMissing = isEditing && entry?.patientArchived;
 
   return (
     <Modal
@@ -374,11 +382,6 @@ export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClos
     >
       <div className="space-y-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
-        {patients.length === 0 ? (
-          <Alert tone="warning" title="لا يوجد مرضى نشطون">
-            أضف مريضاً في صفحة المرضى قبل تسجيل الاستخدام. تبقى سجلات المرضى على محطة العمل هذه.
-          </Alert>
-        ) : null}
         {patientMissing ? (
           <Alert tone="warning" title="المريض مؤرشف">
             ينتمي هذا القيد إلى مريض مؤرشف ولا يمكن إعادة إسناده إليه. ألغِ القيد بدلاً من ذلك، أو اختر مريضاً نشطاً
@@ -386,19 +389,8 @@ export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClos
           </Alert>
         ) : null}
 
-        <Field label="المريض" required hint="ابحث بالاسم أو الرمز في صفحة المرضى للتحقق من الهوية.">
-          <Select value={patientId} onChange={(event) => setPatientId(event.target.value)}>
-            <option value="">اختر مريضاً…</option>
-            {patientMissing && entry ? (
-              <option value={String(entry.patientId)}>{entry.patientName} (مؤرشف)</option>
-            ) : null}
-            {patients.map((patient) => (
-              <option key={patient.id} value={patient.id}>
-                {patient.fullName}
-                {patient.patientCode ? ` · ${patient.patientCode}` : ''}
-              </option>
-            ))}
-          </Select>
+        <Field label="المريض" required hint="ابحث بالاسم أو الرمز. تُعرض المرضى النشطون فقط.">
+          <PatientPicker value={patient} onChange={setPatient} autoFocus onError={setError} />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
@@ -433,8 +425,8 @@ export function UsageEditorDialog({ open, month, row, defaultDate, entry, onClos
           </Field>
         ) : null}
 
-        <div className="flex items-start gap-2 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2 text-[11px] text-slate-400">
-          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+        <div className="flex items-start gap-2 rounded-lg border border-slate-700/60 bg-slate-900 px-3 py-2 text-[11px] text-slate-500">
+          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden />
           يُرفض الاستخدام إذا لم يُهيأ المخزون الشهري صراحةً، أو كان الشهر مغلقاً، أو كانت الكمية المسجلة ستجعل المخزون
           المتبقي سالباً.
         </div>

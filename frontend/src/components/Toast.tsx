@@ -45,19 +45,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={item.id}
               className={cn(
-                'pointer-events-auto flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-[13px] shadow-xl backdrop-blur animate-fade-in',
-                item.tone === 'success' && 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
-                item.tone === 'error' && 'border-rose-500/40 bg-rose-500/10 text-rose-200',
-                item.tone === 'info' && 'border-sky-500/40 bg-sky-500/10 text-sky-200',
+                'pointer-events-auto flex items-start gap-2.5 rounded-xl border bg-slate-950 px-3.5 py-3 text-[13px] text-slate-200 shadow-floating animate-slide-in-up',
+                item.tone === 'success' && 'border-emerald-500/35',
+                item.tone === 'error' && 'border-rose-500/35',
+                item.tone === 'info' && 'border-sky-500/35',
               )}
               role={item.tone === 'error' ? 'alert' : 'status'}
             >
-              <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <Icon
+                className={cn(
+                  'mt-0.5 h-4 w-4 shrink-0',
+                  item.tone === 'success' && 'text-emerald-400',
+                  item.tone === 'error' && 'text-rose-400',
+                  item.tone === 'info' && 'text-sky-400',
+                )}
+                aria-hidden
+              />
               <span className="flex-1 leading-5">{item.message}</span>
               <button
                 type="button"
                 onClick={() => dismiss(item.id)}
-                className="focus-ring rounded p-0.5 opacity-60 hover:opacity-100"
+                className="focus-ring rounded p-0.5 text-slate-500 hover:text-slate-200"
                 aria-label="إغلاق الإشعار"
               >
                 <X className="h-3.5 w-3.5" />

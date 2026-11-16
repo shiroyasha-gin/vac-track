@@ -10,8 +10,20 @@ export function AuditEvents(arg1) {
   return window['go']['app']['App']['AuditEvents'](arg1);
 }
 
+export function AuthStatus() {
+  return window['go']['app']['App']['AuthStatus']();
+}
+
 export function Bootstrap() {
   return window['go']['app']['App']['Bootstrap']();
+}
+
+export function CancelAppointment(arg1) {
+  return window['go']['app']['App']['CancelAppointment'](arg1);
+}
+
+export function ChangePassword(arg1, arg2) {
+  return window['go']['app']['App']['ChangePassword'](arg1, arg2);
 }
 
 export function ClearPublisherToken() {
@@ -22,6 +34,14 @@ export function CloseMonth(arg1) {
   return window['go']['app']['App']['CloseMonth'](arg1);
 }
 
+export function CompleteAppointment(arg1) {
+  return window['go']['app']['App']['CompleteAppointment'](arg1);
+}
+
+export function CreateAppointment(arg1) {
+  return window['go']['app']['App']['CreateAppointment'](arg1);
+}
+
 export function CreateBackup() {
   return window['go']['app']['App']['CreateBackup']();
 }
@@ -30,8 +50,16 @@ export function CreatePatient(arg1) {
   return window['go']['app']['App']['CreatePatient'](arg1);
 }
 
+export function CreateTakenAppointment(arg1) {
+  return window['go']['app']['App']['CreateTakenAppointment'](arg1);
+}
+
 export function CreateUsage(arg1) {
   return window['go']['app']['App']['CreateUsage'](arg1);
+}
+
+export function CreateUser(arg1) {
+  return window['go']['app']['App']['CreateUser'](arg1);
 }
 
 export function CreateVaccine(arg1) {
@@ -58,16 +86,28 @@ export function GetUsage(arg1) {
   return window['go']['app']['App']['GetUsage'](arg1);
 }
 
+export function InitializeDatabase() {
+  return window['go']['app']['App']['InitializeDatabase']();
+}
+
 export function InitializeInventory(arg1) {
   return window['go']['app']['App']['InitializeInventory'](arg1);
 }
 
-export function ListActivePatients() {
-  return window['go']['app']['App']['ListActivePatients']();
+export function ListAppointments(arg1) {
+  return window['go']['app']['App']['ListAppointments'](arg1);
 }
 
 export function ListVaccines(arg1) {
   return window['go']['app']['App']['ListVaccines'](arg1);
+}
+
+export function Login(arg1, arg2) {
+  return window['go']['app']['App']['Login'](arg1, arg2);
+}
+
+export function Logout() {
+  return window['go']['app']['App']['Logout']();
 }
 
 export function MonthOverview(arg1) {
@@ -76,6 +116,10 @@ export function MonthOverview(arg1) {
 
 export function MonthReport(arg1) {
   return window['go']['app']['App']['MonthReport'](arg1);
+}
+
+export function PatientDetail(arg1) {
+  return window['go']['app']['App']['PatientDetail'](arg1);
 }
 
 export function PatientUsage(arg1) {
@@ -98,12 +142,20 @@ export function ReopenMonth(arg1, arg2) {
   return window['go']['app']['App']['ReopenMonth'](arg1, arg2);
 }
 
+export function ResetUserPassword(arg1, arg2) {
+  return window['go']['app']['App']['ResetUserPassword'](arg1, arg2);
+}
+
 export function RestoreBackup() {
   return window['go']['app']['App']['RestoreBackup']();
 }
 
-export function SearchPatients(arg1, arg2) {
-  return window['go']['app']['App']['SearchPatients'](arg1, arg2);
+export function SearchPatients(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SearchPatients'](arg1, arg2, arg3, arg4);
+}
+
+export function SearchPatientsLimited(arg1, arg2) {
+  return window['go']['app']['App']['SearchPatientsLimited'](arg1, arg2);
 }
 
 export function SetLowStockThreshold(arg1) {
@@ -122,6 +174,10 @@ export function SetPublisherToken(arg1) {
   return window['go']['app']['App']['SetPublisherToken'](arg1);
 }
 
+export function SetUserActive(arg1, arg2) {
+  return window['go']['app']['App']['SetUserActive'](arg1, arg2);
+}
+
 export function SetVaccineArchived(arg1, arg2) {
   return window['go']['app']['App']['SetVaccineArchived'](arg1, arg2);
 }
@@ -132,6 +188,10 @@ export function Settings() {
 
 export function Unpublish() {
   return window['go']['app']['App']['Unpublish']();
+}
+
+export function UpdateAppointment(arg1, arg2) {
+  return window['go']['app']['App']['UpdateAppointment'](arg1, arg2);
 }
 
 export function UpdatePatient(arg1, arg2) {
@@ -146,6 +206,10 @@ export function UpdateUsage(arg1) {
   return window['go']['app']['App']['UpdateUsage'](arg1);
 }
 
+export function UpdateUser(arg1, arg2) {
+  return window['go']['app']['App']['UpdateUser'](arg1, arg2);
+}
+
 export function UpdateVaccine(arg1, arg2) {
   return window['go']['app']['App']['UpdateVaccine'](arg1, arg2);
 }
@@ -156,6 +220,10 @@ export function UsageForVaccineDay(arg1, arg2, arg3) {
 
 export function UsageForVaccineMonth(arg1, arg2) {
   return window['go']['app']['App']['UsageForVaccineMonth'](arg1, arg2);
+}
+
+export function Users() {
+  return window['go']['app']['App']['Users']();
 }
 
 export function VoidUsage(arg1) {

@@ -1,24 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Loader2, Syringe } from 'lucide-react';
 import { api, errorMessage, type app } from './lib/api';
 import { MonthProvider } from './components/MonthContext';
 import { Shell } from './components/Shell';
 import { ToastProvider } from './components/Toast';
 import { FatalPage } from './pages/FatalPage';
+import { LoginPage } from './pages/LoginPage';
 import { MonthlyPage } from './pages/MonthlyPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { VaccinesPage } from './pages/VaccinesPage';
 import { PatientsPage } from './pages/PatientsPage';
-import { ReportsPage } from './pages/ReportsPage';
-import { PublishPage } from './pages/PublishPage';
-import { AuditPage } from './pages/AuditPage';
+import { PatientDetailPage } from './pages/PatientDetailPage';
+import { AppointmentsPage } from './pages/AppointmentsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
-function StartupScreen({ message }: { message?: string }) {
-  return (
-    <div className="flex min-h-full items-center justify-center bg-slate-950">
+const IDLE_LOCK_MS = 20 * 60 * 1000;
+
+function StartupScreen({ message }: { message?: string }) {  return (
+    <div className="flex min-h-full items-center justify-center bg-slate-900">
       <div className="flex flex-col items-center gap-3 text-slate-400">
-        <div className="flex h-11 w-11 animate-pulse items-center justify-center rounded-xl bg-emerald-500 text-emerald-950">
+        <div className="flex h-11 w-11 animate-pulse items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/30">
           <Syringe className="h-6 w-6" />
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -30,26 +32,69 @@ function StartupScreen({ message }: { message?: string }) {
   );
 }
 
+function AnimatedRoutes({
+  role,
+  currentUserId,
+  onAuthUpdated,
+}: {
+  role: string;
+  currentUserId: number;
+  onAuthUpdated: (state: app.AuthStateDTO) => void;
+}) {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="animate-fade-in">
+      <Routes>
+        <Route path="/" element={<MonthlyPage />} />
+        <Route path="/vaccines" element={<VaccinesPage />} />
+        <Route path="/patients" element={<PatientsPage />} />
+        <Route path="/patients/:patientId" element={<PatientDetailPage />} />
+        <Route path="/appointments" element={<AppointmentsPage />} />
+        <Route path="/settings" element={<SettingsPage role={role} currentUserId={currentUserId} onAuthUpdated={onAuthUpdated} />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
+}
+
 export default function App() {
   const [bootstrap, setBootstrap] = useState<app.BootstrapInfo | null>(null);
+  const [auth, setAuth] = useState<app.AuthStateDTO | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [startupError, setStartupError] = useState('');
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
     setStartupError('');
-    api
-      .Bootstrap()
-      .then((info) => {
-        if (active) {
-          setBootstrap(info);
+    setBootstrap(null);
+    setAuth(null);
+    setAuthLoading(true);
+    (async () => {
+      try {
+        const info = await api.Bootstrap();
+        if (!active) {
+          return;
         }
-      })
-      .catch((cause: unknown) => {
+        setBootstrap(info);
+        if (!info.ready) {
+          return;
+        }
+        const session = await api.AuthStatus();
+        if (active) {
+          setAuth(session);
+        }
+      } catch (cause: unknown) {
         if (active) {
           setStartupError(errorMessage(cause));
         }
-      });
+      } finally {
+        if (active) {
+          setAuthLoading(false);
+        }
+      }
+    })();
     return () => {
       active = false;
     };
@@ -59,6 +104,53 @@ export default function App() {
     setBootstrap(null);
     setAttempt((value) => value + 1);
   }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      const state = await api.Logout();
+      setAuth(state);
+    } catch (cause) {
+      setStartupError(errorMessage(cause));
+    }
+  }, []);
+
+  const authenticated = auth?.authenticated === true;
+
+  useEffect(() => {
+    if (!authenticated) {
+      return;
+    }
+    let timer = 0;
+    const lock = async () => {
+      try {
+        setAuth(await api.Logout());
+      } catch {
+        setAuth({ authenticated: false, usingDefaultPassword: false } as app.AuthStateDTO);
+      }
+    };
+    const arm = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => void lock(), IDLE_LOCK_MS);
+    };
+    arm();
+    const events = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'focus'] as const;
+    for (const name of events) {
+      window.addEventListener(name, arm, { passive: true });
+    }
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        arm();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.clearTimeout(timer);
+      for (const name of events) {
+        window.removeEventListener(name, arm);
+      }
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [authenticated]);
 
   return (
     <ToastProvider>
@@ -83,20 +175,24 @@ export default function App() {
         <StartupScreen />
       ) : !bootstrap.ready ? (
         <FatalPage bootstrap={bootstrap} onReload={reload} />
+      ) : authLoading ? (
+        <StartupScreen message="جارٍ التحقق من الجلسة المحلية…" />
+      ) : !auth || !auth.authenticated || !auth.user ? (
+        <LoginPage version={bootstrap.version} onSuccess={setAuth} />
       ) : (
         <HashRouter>
           <MonthProvider month={bootstrap.currentMonth}>
-            <Shell bootstrap={bootstrap}>
-              <Routes>
-                <Route path="/" element={<MonthlyPage />} />
-                <Route path="/vaccines" element={<VaccinesPage />} />
-                <Route path="/patients" element={<PatientsPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/publish" element={<PublishPage />} />
-                <Route path="/audit" element={<AuditPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+            <Shell
+              bootstrap={bootstrap}
+              user={auth.user}
+              usingDefaultPassword={auth.usingDefaultPassword}
+              onLogout={logout}
+            >
+              <AnimatedRoutes
+                role={auth.user.role}
+                currentUserId={auth.user.id}
+                onAuthUpdated={setAuth}
+              />
             </Shell>
           </MonthProvider>
         </HashRouter>

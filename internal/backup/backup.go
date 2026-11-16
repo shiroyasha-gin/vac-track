@@ -18,6 +18,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"vaccineshit/internal/atomicfile"
 )
 
 // Info describes a created backup file.
@@ -351,13 +353,7 @@ func hashFile(path string) (string, int64, error) {
 }
 
 func replaceFile(src, dst string) error {
-	if err := os.Rename(src, dst); err == nil {
-		return nil
-	}
-	if err := os.Remove(dst); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	return os.Rename(src, dst)
+	return atomicfile.Replace(src, dst)
 }
 
 func samePath(a, b string) bool {

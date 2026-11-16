@@ -21,6 +21,28 @@ func (q *Queries) CountPatientUsage(ctx context.Context, patientID int64) (int64
 	return count, err
 }
 
+const countPatients = `-- name: CountPatients :one
+SELECT COUNT(*) FROM patients
+WHERE (CAST(?1 AS INTEGER) = 1 OR is_archived = 0)
+  AND (
+    CAST(?2 AS TEXT) = ''
+    OR full_name LIKE '%' || CAST(?2 AS TEXT) || '%'
+    OR patient_code LIKE '%' || CAST(?2 AS TEXT) || '%'
+  )
+`
+
+type CountPatientsParams struct {
+	IncludeArchived int64  `json:"include_archived"`
+	Search          string `json:"search"`
+}
+
+func (q *Queries) CountPatients(ctx context.Context, arg CountPatientsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPatients, arg.IncludeArchived, arg.Search)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createPatient = `-- name: CreatePatient :one
 INSERT INTO patients (full_name, patient_code, created_at, updated_at)
 VALUES (?, ?, ?, ?)
@@ -73,14 +95,32 @@ func (q *Queries) GetPatient(ctx context.Context, id int64) (Patient, error) {
 	return i, err
 }
 
-const listActivePatients = `-- name: ListActivePatients :many
+const listPatients = `-- name: ListPatients :many
 SELECT id, full_name, patient_code, is_archived, archived_at, created_at, updated_at FROM patients
-WHERE is_archived = 0
-ORDER BY full_name COLLATE NOCASE ASC
+WHERE (CAST(?1 AS INTEGER) = 1 OR is_archived = 0)
+  AND (
+    CAST(?2 AS TEXT) = ''
+    OR full_name LIKE '%' || CAST(?2 AS TEXT) || '%'
+    OR patient_code LIKE '%' || CAST(?2 AS TEXT) || '%'
+  )
+ORDER BY is_archived ASC, full_name COLLATE NOCASE ASC, id ASC
+LIMIT CAST(?4 AS INTEGER) OFFSET CAST(?3 AS INTEGER)
 `
 
-func (q *Queries) ListActivePatients(ctx context.Context) ([]Patient, error) {
-	rows, err := q.db.QueryContext(ctx, listActivePatients)
+type ListPatientsParams struct {
+	IncludeArchived int64  `json:"include_archived"`
+	Search          string `json:"search"`
+	OffsetRows      int64  `json:"offset_rows"`
+	LimitCount      int64  `json:"limit_count"`
+}
+
+func (q *Queries) ListPatients(ctx context.Context, arg ListPatientsParams) ([]Patient, error) {
+	rows, err := q.db.QueryContext(ctx, listPatients,
+		arg.IncludeArchived,
+		arg.Search,
+		arg.OffsetRows,
+		arg.LimitCount,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -110,24 +150,24 @@ func (q *Queries) ListActivePatients(ctx context.Context) ([]Patient, error) {
 	return items, nil
 }
 
-const listPatients = `-- name: ListPatients :many
+const searchActivePatients = `-- name: SearchActivePatients :many
 SELECT id, full_name, patient_code, is_archived, archived_at, created_at, updated_at FROM patients
-WHERE (CAST(?1 AS INTEGER) = 1 OR is_archived = 0)
+WHERE is_archived = 0
   AND (
-    CAST(?2 AS TEXT) = ''
-    OR full_name LIKE '%' || CAST(?2 AS TEXT) || '%'
-    OR patient_code LIKE '%' || CAST(?2 AS TEXT) || '%'
+    full_name LIKE '%' || CAST(?1 AS TEXT) || '%'
+    OR patient_code LIKE '%' || CAST(?1 AS TEXT) || '%'
   )
-ORDER BY is_archived ASC, full_name COLLATE NOCASE ASC
+ORDER BY full_name COLLATE NOCASE ASC
+LIMIT CAST(?2 AS INTEGER)
 `
 
-type ListPatientsParams struct {
-	IncludeArchived int64  `json:"include_archived"`
-	Search          string `json:"search"`
+type SearchActivePatientsParams struct {
+	Search     string `json:"search"`
+	LimitCount int64  `json:"limit_count"`
 }
 
-func (q *Queries) ListPatients(ctx context.Context, arg ListPatientsParams) ([]Patient, error) {
-	rows, err := q.db.QueryContext(ctx, listPatients, arg.IncludeArchived, arg.Search)
+func (q *Queries) SearchActivePatients(ctx context.Context, arg SearchActivePatientsParams) ([]Patient, error) {
+	rows, err := q.db.QueryContext(ctx, searchActivePatients, arg.Search, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}

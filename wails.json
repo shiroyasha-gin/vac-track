@@ -1,12 +1,19 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "vaccineshit",
-  "outputfilename": "vaccineshit",
+  "name": "VacTrack",
+  "outputfilename": "VacTrack",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
     "name": "Vaccine Inventory"
+  },
+  "info": {
+    "companyName": "VacTrack",
+    "productName": "VacTrack",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright 2026 VacTrack",
+    "comments": "Local vaccine inventory and monthly reporting for a small clinic."
   }
 }

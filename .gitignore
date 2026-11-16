@@ -1,5 +1,6 @@
 # Build output
 /build/bin/
+/vaccineshit
 /frontend/dist/
 /frontend/package.json.md5
 /.bin/

@@ -23,14 +23,16 @@ type Options struct {
 
 // Services is the application service graph.
 type Services struct {
-	Vaccines  *VaccineService
-	Patients  *PatientService
-	Inventory *InventoryService
-	Usage     *UsageService
-	Reporting *ReportingService
-	Audit     *AuditService
-	Settings  *SettingsService
-	CSV       *CSVService
+	Vaccines     *VaccineService
+	Patients     *PatientService
+	Inventory    *InventoryService
+	Usage        *UsageService
+	Appointments *AppointmentService
+	Reporting    *ReportingService
+	Audit        *AuditService
+	Settings     *SettingsService
+	CSV          *CSVService
+	Users        *UserService
 }
 
 // New wires services around a store. It performs no queries.
@@ -47,14 +49,16 @@ func New(st store.Store, opts Options) *Services {
 	reporting.inventory = inventory
 	reporting.usage = usage
 	return &Services{
-		Vaccines:  &VaccineService{base: base},
-		Patients:  &PatientService{base: base},
-		Inventory: inventory,
-		Usage:     usage,
-		Reporting: reporting,
-		Audit:     auditSvc,
-		Settings:  settings,
-		CSV:       &CSVService{base: base, reporting: reporting},
+		Vaccines:     &VaccineService{base: base},
+		Patients:     &PatientService{base: base},
+		Inventory:    inventory,
+		Usage:        usage,
+		Appointments: &AppointmentService{base: base, usage: usage},
+		Reporting:    reporting,
+		Audit:        auditSvc,
+		Settings:     settings,
+		CSV:          &CSVService{base: base, reporting: reporting},
+		Users:        &UserService{base: base},
 	}
 }
 

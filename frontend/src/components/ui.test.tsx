@@ -25,7 +25,7 @@ describe('ConfirmDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Close month' }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'إلغاء' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -51,13 +51,13 @@ describe('MonthPicker', () => {
       </MonthProvider>,
     );
 
-    const input = screen.getByLabelText('Inventory month');
+    const input = screen.getByLabelText('شهر المخزون');
     expect(input).toHaveValue('2026-01');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Previous month' }));
+    fireEvent.click(screen.getByRole('button', { name: 'الشهر السابق' }));
     expect(input).toHaveValue('2025-12');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Next month' }));
+    fireEvent.click(screen.getByRole('button', { name: 'الشهر التالي' }));
     expect(input).toHaveValue('2026-01');
   });
 
@@ -68,7 +68,7 @@ describe('MonthPicker', () => {
       </MonthProvider>,
     );
 
-    const input = screen.getByLabelText('Inventory month');
+    const input = screen.getByLabelText('شهر المخزون');
     fireEvent.change(input, { target: { value: '2026-08' } });
     expect(input).toHaveValue('2026-08');
   });

@@ -324,6 +324,27 @@ func TestPublicRateLimit(t *testing.T) {
 	}
 }
 
+func TestAdminRateLimitIsIndependentFromPublicTraffic(t *testing.T) {
+	t.Parallel()
+	server, _ := newTestServer(t, t.TempDir(), "", func(c *Config) {
+		c.PublicRequestsPerMinute = 1
+		c.AdminRequestsPerMinute = 1
+	})
+	for i := 0; i < 2; i++ {
+		resp := do(t, http.MethodGet, server.URL+"/api/public/snapshot", nil, "")
+		resp.Body.Close()
+	}
+	body, err := json.Marshal(validSnapshot(t, "rate-limit-independent"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp := do(t, http.MethodPut, server.URL+"/api/admin/snapshot", body, testToken)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		t.Fatalf("admin status after public traffic = %d, want success", resp.StatusCode)
+	}
+}
+
 func TestStaticPublicSite(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -379,5 +400,136 @@ func TestFileStoreRejectsIdCollision(t *testing.T) {
 	changed.Totals.Remaining--
 	if _, _, err := store.Publish(context.Background(), changed); err != ErrSnapshotConflict {
 		t.Fatalf("collision error = %v, want ErrSnapshotConflict", err)
+	}
+}
+
+func TestPublishRequiresExactJSONMediaType(t *testing.T) {
+	t.Parallel()
+	server, _ := newTestServer(t, t.TempDir(), "")
+	body, err := json.Marshal(validSnapshot(t, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, contentType := range []string{"", "text/plain", "application/jsonp", "application/json; charset"} {
+		req, err := http.NewRequest(http.MethodPut, server.URL+"/api/admin/snapshot", bytes.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		}
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusUnsupportedMediaType {
+			t.Fatalf("Content-Type %q: status = %d, want 415", contentType, resp.StatusCode)
+		}
+	}
+
+	req, err := http.NewRequest(http.MethodPut, server.URL+"/api/admin/snapshot", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Authorization", "Bearer "+testToken)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("charset content type status = %d, want 201", resp.StatusCode)
+	}
+}
+
+func TestMatchesETagHandlesEmptyAndWeakTags(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		header string
+		etag   string
+		want   bool
+	}{
+		{name: "empty both", header: "", etag: "", want: false},
+		{name: "empty header", header: "", etag: `"abc"`, want: false},
+		{name: "exact", header: `"abc"`, etag: `"abc"`, want: true},
+		{name: "weak", header: `W/"abc"`, etag: `"abc"`, want: true},
+		{name: "list", header: `"other", "abc"`, etag: `"abc"`, want: true},
+		{name: "star", header: "*", etag: `"abc"`, want: true},
+		{name: "mismatch", header: `"other"`, etag: `"abc"`, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := matchesETag(tc.header, tc.etag); got != tc.want {
+				t.Fatalf("matchesETag(%q, %q) = %v, want %v", tc.header, tc.etag, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestStaticHandlerCannotEscapePublicDir(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	site := filepath.Join(root, "site")
+	if err := os.Mkdir(site, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(site, "index.html"), []byte("public"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "secret.txt"), []byte("do not serve"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := &server{publicDir: site}
+	for _, target := range []string{"/../secret.txt", "/%2e%2e/secret.txt", "/..%2fsecret.txt"} {
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		rec := httptest.NewRecorder()
+		s.static().ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("%s: status = %d, want 404", target, rec.Code)
+		}
+		if strings.Contains(rec.Body.String(), "do not serve") {
+			t.Fatalf("%s: response leaked a file outside the public directory", target)
+		}
+	}
+}
+
+func TestSecurityHeaders(t *testing.T) {
+	t.Parallel()
+	server, _ := newTestServer(t, t.TempDir(), "")
+	resp := do(t, http.MethodGet, server.URL+"/healthz", nil, "")
+	defer resp.Body.Close()
+	headers := map[string]string{
+		"X-Content-Type-Options":    "nosniff",
+		"X-Frame-Options":           "DENY",
+		"Referrer-Policy":           "no-referrer",
+		"Strict-Transport-Security": "max-age=31536000",
+	}
+	for name, want := range headers {
+		if got := resp.Header.Get(name); got != want {
+			t.Fatalf("%s = %q, want %q", name, got, want)
+		}
+	}
+	if resp.Header.Get("Content-Security-Policy") == "" || resp.Header.Get("Permissions-Policy") == "" {
+		t.Fatal("missing Content-Security-Policy or Permissions-Policy header")
+	}
+}
+
+func TestPanicRecoveryReturnsInternalError(t *testing.T) {
+	t.Parallel()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	handler := recoverPanics(logger, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	}))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), "boom") {
+		t.Fatal("panic details leaked to the client")
 	}
 }

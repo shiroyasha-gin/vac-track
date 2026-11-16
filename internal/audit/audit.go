@@ -37,6 +37,11 @@ const (
 	EventUsageUpdated = "usage.updated"
 	EventUsageVoided  = "usage.voided"
 
+	EventAppointmentCreated   = "appointment.created"
+	EventAppointmentUpdated   = "appointment.updated"
+	EventAppointmentCompleted = "appointment.completed"
+	EventAppointmentCancelled = "appointment.cancelled"
+
 	EventBackupCreated  = "backup.created"
 	EventBackupRestored = "backup.restored"
 
@@ -46,7 +51,37 @@ const (
 
 	EventSettingsUpdated = "settings.updated"
 	EventExportCompleted = "export.completed"
+
+	EventLoginSucceeded  = "auth.login_succeeded"
+	EventPasswordChanged = "auth.password_changed"
+
+	EventUserCreated       = "user.created"
+	EventUserUpdated       = "user.updated"
+	EventUserDeactivated   = "user.deactivated"
+	EventUserReactivated   = "user.reactivated"
+	EventUserPasswordReset = "user.password_reset"
 )
+
+type actorContextKey struct{}
+
+// Actor identifies the signed-in operator that caused a mutation. The app layer
+// attaches it to every operation context; audit.Record copies it into metadata
+// without forcing every service call site to repeat the identity.
+type Actor struct {
+	ID       int64
+	Username string
+}
+
+// WithActor returns a context carrying the acting operator.
+func WithActor(ctx context.Context, actor Actor) context.Context {
+	return context.WithValue(ctx, actorContextKey{}, actor)
+}
+
+// ActorFromContext returns the operator attached by the app layer, if any.
+func ActorFromContext(ctx context.Context) (Actor, bool) {
+	actor, ok := ctx.Value(actorContextKey{}).(Actor)
+	return actor, ok && actor.ID > 0
+}
 
 // Event is the allow-listed audit payload. Metadata must contain numeric IDs,
 // counts and non-sensitive labels only.
@@ -69,6 +104,17 @@ func Record(ctx context.Context, q generated.Querier, now time.Time, event Event
 	metadata := event.Metadata
 	if metadata == nil {
 		metadata = map[string]any{}
+	}
+	if actor, ok := ActorFromContext(ctx); ok {
+		// Copy so callers keep ownership of their map and cannot overwrite the
+		// signed-in identity.
+		withActor := make(map[string]any, len(metadata)+2)
+		for key, value := range metadata {
+			withActor[key] = value
+		}
+		withActor["actor_id"] = actor.ID
+		withActor["actor_username"] = actor.Username
+		metadata = withActor
 	}
 	body, err := json.Marshal(metadata)
 	if err != nil {

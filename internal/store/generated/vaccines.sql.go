@@ -13,16 +13,18 @@ import (
 const countVaccineHistory = `-- name: CountVaccineHistory :one
 SELECT
     (SELECT COUNT(*) FROM usage_entries WHERE usage_entries.vaccine_id = ?) +
-    (SELECT COUNT(*) FROM monthly_inventory WHERE monthly_inventory.vaccine_id = ?) AS history_count
+    (SELECT COUNT(*) FROM monthly_inventory WHERE monthly_inventory.vaccine_id = ?) +
+    (SELECT COUNT(*) FROM appointment_items WHERE appointment_items.vaccine_id = ?) AS history_count
 `
 
 type CountVaccineHistoryParams struct {
 	VaccineID   int64 `json:"vaccine_id"`
 	VaccineID_2 int64 `json:"vaccine_id_2"`
+	VaccineID_3 int64 `json:"vaccine_id_3"`
 }
 
 func (q *Queries) CountVaccineHistory(ctx context.Context, arg CountVaccineHistoryParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countVaccineHistory, arg.VaccineID, arg.VaccineID_2)
+	row := q.db.QueryRowContext(ctx, countVaccineHistory, arg.VaccineID, arg.VaccineID_2, arg.VaccineID_3)
 	var history_count int64
 	err := row.Scan(&history_count)
 	return history_count, err

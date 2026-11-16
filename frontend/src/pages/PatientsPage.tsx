@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
+  ChevronLeft,
+  ChevronRight,
   History,
   Pencil,
   Plus,
@@ -38,12 +40,22 @@ interface PatientForm {
   patientCode: string;
 }
 
+const PAGE_SIZE = 50;
+
 export function PatientsPage() {
   const { notify } = useToast();
   const [query, setQuery] = useState('');
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [offset, setOffset] = useState(0);
   const debouncedQuery = useDebouncedValue(query, 250);
-  const patients = useAsync(() => api.SearchPatients(debouncedQuery, includeArchived), [debouncedQuery, includeArchived]);
+  const patients = useAsync(
+    () => api.SearchPatients(debouncedQuery, includeArchived, PAGE_SIZE, offset),
+    [debouncedQuery, includeArchived, offset],
+  );
+
+  useEffect(() => {
+    setOffset(0);
+  }, [debouncedQuery, includeArchived]);
 
   const [form, setForm] = useState<PatientForm | null>(null);
   const [formError, setFormError] = useState('');
@@ -52,7 +64,8 @@ export function PatientsPage() {
   const [historyTarget, setHistoryTarget] = useState<app.PatientDTO | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const items = patients.data ?? [];
+  const items = patients.data?.items ?? [];
+  const total = patients.data?.total ?? 0;
 
   const openCreate = () => {
     setForm({ fullName: '', patientCode: '' });
@@ -109,8 +122,7 @@ export function PatientsPage() {
     <>
       <PageHeader
         title="المرضى"
-        description="سجلات هوية محلية للمرضى تُستخدم فقط لإبقاء الاستخدام منسوباً على محطة العمل هذه. الاسم هو الحقل الوحيد المطلوب؛ ويمكن لرمز اختياري تمييز الأسماء المتشابهة."
-      >
+>
         <IconButton label="تحديث المرضى" onClick={patients.reload}>
           <RefreshCw className="h-4 w-4" />
         </IconButton>
@@ -134,16 +146,15 @@ export function PatientsPage() {
       <Card>
         <CardHeader
           title="سجل المرضى"
-          description="يجري البحث في قاعدة بيانات SQLite المحلية فقط. يحتفظ المرضى المؤرشفون بسجلهم ولا يمكنهم استلام استخدام جديد."
-          action={
+action={
             <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
+              <div className="relative w-full sm:w-64">
                 <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="ابحث بالاسم أو الرمز…"
-                  className="w-64 ps-8"
+                  className="w-full ps-8"
                   aria-label="البحث في المرضى"
                   autoFocus
                 />
@@ -167,11 +178,7 @@ export function PatientsPage() {
           <EmptyState
             icon={<Users className="h-5 w-5" />}
             title={debouncedQuery ? 'لا يوجد مرضى مطابقون' : 'لا يوجد مرضى بعد'}
-            description={
-              debouncedQuery
-                ? 'جرّب اسماً أو رمز مريض مختلفاً، أو ضمّن السجلات المؤرشفة.'
-                : 'أضف مريضاً قبل تسجيل الاستخدام. الاسم هو الحقل المطلوب الوحيد.'
-            }
+
             action={
               !debouncedQuery ? (
                 <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={openCreate}>
@@ -232,14 +239,40 @@ export function PatientsPage() {
             </table>
           </div>
         )}
+
+        {total > PAGE_SIZE ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-700/60 px-3 py-2.5">
+            <span className="text-[11px] text-slate-500">
+              عرض {formatInteger(offset + 1)}–{formatInteger(Math.min(offset + items.length, total))} من{' '}
+              {formatInteger(total)}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                icon={<ChevronRight className="h-3.5 w-3.5" />}
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+              >
+                السابق
+              </Button>
+              <Button
+                size="sm"
+                icon={<ChevronLeft className="h-3.5 w-3.5" />}
+                disabled={offset + PAGE_SIZE >= total}
+                onClick={() => setOffset(offset + PAGE_SIZE)}
+              >
+                التالي
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Card>
 
       <Modal
         open={form !== null}
         onClose={() => setForm(null)}
         title={form?.id ? 'تعديل المريض' : 'إضافة مريض'}
-        description="تُحفظ بيانات المريض في قاعدة بيانات SQLite المحلية فقط ولا تُنشر أبداً."
-        size="sm"
+size="sm"
         footer={
           <>
             <Button variant="ghost" onClick={() => setForm(null)} disabled={saving}>
@@ -257,7 +290,7 @@ export function PatientsPage() {
             <Field label="الاسم الكامل" required>
               <Input
                 value={form.fullName}
-                maxLength={160}
+                maxLength={120}
                 autoFocus
                 onChange={(event) => setForm({ ...form, fullName: event.target.value })}
                 placeholder="اسم المريض"
@@ -269,7 +302,7 @@ export function PatientsPage() {
             >
               <Input
                 value={form.patientCode}
-                maxLength={80}
+                maxLength={40}
                 onChange={(event) => setForm({ ...form, patientCode: event.target.value })}
                 placeholder="مثال: رقم ملف العيادة"
               />
@@ -320,8 +353,7 @@ function PatientHistoryDialog({ patient, onClose }: { patient: app.PatientDTO | 
       open={patient !== null}
       onClose={onClose}
       title={patient ? `${patient.fullName} · سجل الاستخدام` : 'سجل الاستخدام'}
-      description="سجل محلي سري. لا يُرفع أو يُنشر أبداً."
-      size="lg"
+size="lg"
       footer={
         <Button variant="ghost" onClick={onClose}>
           إغلاق

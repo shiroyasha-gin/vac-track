@@ -6,17 +6,31 @@ export function AdjustStock(arg1:app.AdjustmentInputDTO):Promise<app.ActionResul
 
 export function AuditEvents(arg1:app.AuditFilterDTO):Promise<app.AuditPageDTO>;
 
+export function AuthStatus():Promise<app.AuthStateDTO>;
+
 export function Bootstrap():Promise<app.BootstrapInfo>;
+
+export function CancelAppointment(arg1:app.CancelAppointmentInputDTO):Promise<app.ActionResult>;
+
+export function ChangePassword(arg1:string,arg2:string):Promise<app.AuthStateDTO>;
 
 export function ClearPublisherToken():Promise<app.ActionResult>;
 
 export function CloseMonth(arg1:string):Promise<app.ActionResult>;
 
+export function CompleteAppointment(arg1:app.CompleteAppointmentInputDTO):Promise<app.ActionResult>;
+
+export function CreateAppointment(arg1:app.AppointmentInputDTO):Promise<app.ActionResult>;
+
 export function CreateBackup():Promise<app.BackupResultDTO>;
 
 export function CreatePatient(arg1:app.PatientInputDTO):Promise<app.ActionResult>;
 
+export function CreateTakenAppointment(arg1:app.AppointmentInputDTO):Promise<app.ActionResult>;
+
 export function CreateUsage(arg1:app.CreateUsageInputDTO):Promise<app.ActionResult>;
+
+export function CreateUser(arg1:app.CreateUserInputDTO):Promise<app.ActionResult>;
 
 export function CreateVaccine(arg1:app.VaccineInputDTO):Promise<app.ActionResult>;
 
@@ -30,15 +44,23 @@ export function Forecast(arg1:string):Promise<app.ForecastDTO>;
 
 export function GetUsage(arg1:number):Promise<app.UsageEntryDTO>;
 
+export function InitializeDatabase():Promise<app.InitializeDatabaseResultDTO>;
+
 export function InitializeInventory(arg1:app.InitializeInventoryInputDTO):Promise<app.ActionResult>;
 
-export function ListActivePatients():Promise<Array<app.PatientDTO>>;
+export function ListAppointments(arg1:app.AppointmentFilterDTO):Promise<Array<app.AppointmentDTO>>;
 
 export function ListVaccines(arg1:boolean):Promise<Array<app.VaccineDTO>>;
+
+export function Login(arg1:string,arg2:string):Promise<app.AuthStateDTO>;
+
+export function Logout():Promise<app.AuthStateDTO>;
 
 export function MonthOverview(arg1:string):Promise<app.MonthOverviewDTO>;
 
 export function MonthReport(arg1:string):Promise<app.MonthReportDTO>;
+
+export function PatientDetail(arg1:number):Promise<app.PatientDetailDTO>;
 
 export function PatientUsage(arg1:number):Promise<Array<app.UsageRowDTO>>;
 
@@ -50,9 +72,13 @@ export function PublishMonth(arg1:string,arg2:boolean):Promise<app.PublicationRe
 
 export function ReopenMonth(arg1:string,arg2:string):Promise<app.ActionResult>;
 
+export function ResetUserPassword(arg1:number,arg2:string):Promise<app.ActionResult>;
+
 export function RestoreBackup():Promise<app.BackupResultDTO>;
 
-export function SearchPatients(arg1:string,arg2:boolean):Promise<Array<app.PatientDTO>>;
+export function SearchPatients(arg1:string,arg2:boolean,arg3:number,arg4:number):Promise<app.PatientPageDTO>;
+
+export function SearchPatientsLimited(arg1:string,arg2:number):Promise<Array<app.PatientDTO>>;
 
 export function SetLowStockThreshold(arg1:number):Promise<app.ActionResult>;
 
@@ -62,11 +88,15 @@ export function SetPublisherEndpoint(arg1:string):Promise<app.ActionResult>;
 
 export function SetPublisherToken(arg1:string):Promise<app.ActionResult>;
 
+export function SetUserActive(arg1:number,arg2:boolean):Promise<app.ActionResult>;
+
 export function SetVaccineArchived(arg1:number,arg2:boolean):Promise<app.ActionResult>;
 
 export function Settings():Promise<app.SettingsDTO>;
 
 export function Unpublish():Promise<app.PublicationResultDTO>;
+
+export function UpdateAppointment(arg1:number,arg2:app.UpdateAppointmentInputDTO):Promise<app.ActionResult>;
 
 export function UpdatePatient(arg1:number,arg2:app.PatientInputDTO):Promise<app.ActionResult>;
 
@@ -74,10 +104,14 @@ export function UpdateStock(arg1:app.UpdateInventoryInputDTO):Promise<app.Action
 
 export function UpdateUsage(arg1:app.UpdateUsageInputDTO):Promise<app.ActionResult>;
 
+export function UpdateUser(arg1:number,arg2:app.UpdateUserInputDTO):Promise<app.ActionResult>;
+
 export function UpdateVaccine(arg1:number,arg2:app.VaccineInputDTO):Promise<app.ActionResult>;
 
 export function UsageForVaccineDay(arg1:number,arg2:string,arg3:string):Promise<Array<app.UsageRowDTO>>;
 
 export function UsageForVaccineMonth(arg1:number,arg2:string):Promise<Array<app.UsageRowDTO>>;
+
+export function Users():Promise<Array<app.UserDTO>>;
 
 export function VoidUsage(arg1:app.VoidUsageInputDTO):Promise<app.ActionResult>;

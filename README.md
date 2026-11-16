@@ -5,7 +5,7 @@ A desktop-first vaccine stock and usage tracker for a single clinic workstation,
 - **Desktop app:** Go, Wails v2, SQLite, sqlc, React, TypeScript, Tailwind CSS.
 - **Local data:** one SQLite database in the operating system's per-user data directory.
 - **Public output:** a separate HTTPS service that accepts only allow-listed monthly aggregate snapshots.
-- **No login, no sync:** the desktop app is designed for one trusted local operator on one workstation.
+- **Local login:** bcrypt-hashed operator accounts gate the desktop app; the session is memory-only and auto-locks after 20 minutes of inactivity.
 
 The application is an inventory and planning tool. It is not a medical device, a clinical decision system, or a substitute for official immunization records.
 
@@ -52,7 +52,7 @@ The public payload is defined by `internal/publishing.Snapshot`. It contains:
 }
 ```
 
-The desktop builds this payload from aggregate fields only, recomputes all totals, and refuses to publish if the content changed after the operator reviewed the preview.
+The publication backend builds this payload from aggregate fields only, recomputes all totals, and refuses to publish if the content changed after the operator reviewed the preview.
 
 ---
 
@@ -63,7 +63,7 @@ These are the intended operating assumptions. They are not enforced as multi-use
 - **Whole doses only.** Quantities are integers; fractional doses are rejected.
 - **Balance rule:** `opening + received − active usage = remaining`. A transaction that would make stock negative is rejected.
 - **Explicit monthly initialization.** Usage cannot be recorded until a monthly inventory row exists for that vaccine, even if opening and received stock are both zero.
-- **One local operator and one workstation.** There is no application login, role model, remote access, or synchronization.
+- **One workstation, local accounts.** Admins manage users and station-wide settings. Staff accounts handle daily stock, patient and appointment work. There is no remote access or synchronization, and every account on this workstation sees the same local data.
 - **No cloud storage.** The database, logs, backups and exports stay on the local machine unless the operator moves them.
 - **Monthly public reports only.** The public service rejects anything other than a monthly aggregate snapshot.
 - **Low-stock threshold defaults to 10 doses.** Change it in **Settings**.
@@ -79,18 +79,26 @@ The database directory is created with `0700` permissions and the database, log,
 
 ## Features
 
+- Local bcrypt-hashed operator login with an in-memory session and a first-run default account.
+- Password change from **Settings → أمان الحساب** after verifying the current password.
+- Admin-only account management in **Settings → إدارة المستخدمين**: create users, edit names and roles, reset passwords, and deactivate accounts. The last active admin cannot be removed, and you cannot deactivate yourself.
+- Failed-login throttling after five attempts, with a short block that grows on repeated failures.
+- Audit events record the acting account (`actor_id`, `actor_username`) for every mutation.
 - Vaccine catalog with archive support and optional codes, categories and units.
 - Patient directory with a required name and optional local patient code.
+- Patient file with complete dose history, per-vaccine coverage and latest dose dates, plus scheduled and completed appointments.
+- Appointment registration with immediate stock deduction: recording a visit creates exactly one audited usage entry per vaccine, deducts its doses from that month's stock and appears in the monthly usage totals. Editing an appointment adjusts or voids the linked entries so stock never diverges. Cancelling an appointment restores the reserved doses.
 - Monthly inventory table with numbered day columns (28–31 days), opening leftover, received stock, total usage and remaining stock.
 - Carryover suggestion from the previous month, with a required reason when overridden.
 - Audited stock adjustments, usage corrections and voiding instead of deletion.
 - Month close and reopen workflow with reasons.
 - Local monthly reports, daily usage trend, comparison with the previous month and a transparent demand forecast.
+- A4 print and PDF export for the monthly report and for each vaccine report, with print-only headers, filters and page-safe tables.
 - Aggregate-only CSV export and confidential patient-level CSV export.
 - Verified SQLite backups and staged restore with automatic rollback.
-- Public snapshot preview, stale-preview detection, publish and unpublish.
+- Aggregate snapshot API served by the separate public service; the desktop publish and audit screens are not part of this build.
 - Public statistics site with loading, empty and error states.
-- Audit review filtered by event type and month.
+- Local audit trail for every stock, usage, appointment and publication change.
 
 ---
 
@@ -98,7 +106,7 @@ The database directory is created with `0700` permissions and the database, log,
 
 ### All platforms
 
-- Go **1.26 or newer** (the project is developed with Go 1.27).
+- Go **1.26 or newer**. `go.mod` pins the patched `go1.27.3` toolchain, which Go downloads automatically when needed.
 - Node.js **20 or newer** and npm.
 - Wails CLI **v2.17.1 or newer**. Older Wails releases embed an `x/tools` version that cannot type-check Go 1.27 modules, which breaks binding generation.
 
@@ -133,7 +141,7 @@ If your distribution provides WebKitGTK 4.0 instead, omit the tag. Check with `w
 
 ### macOS and Windows
 
-Use the Wails prerequisites for your platform. The `webkit2_41` tag is Linux-specific. Cross-compiling a desktop bundle is not supported by this project's workflow; build on the target operating system.
+Use the Wails prerequisites for your platform. The `webkit2_41` tag is Linux-specific. Windows builds can be cross-compiled from Linux with MinGW-w64. Windows is portable: keep `VacTrack.exe` in a writable folder and the database, backups and log stay beside it. macOS still needs a build on macOS.
 
 ---
 
@@ -153,10 +161,10 @@ Production build:
 
 ```sh
 wails build -tags webkit2_41 -nopackage
-./build/bin/vaccineshit
+./build/bin/VacTrack
 ```
 
-Remove `-nopackage` if you want the platform packaging step. On Linux, the plain binary is written to `build/bin/vaccineshit`.
+Remove `-nopackage` if you want the platform packaging step. On Linux, the plain binary is written to `build/bin/VacTrack`.
 
 ### Where data lives
 
@@ -166,7 +174,7 @@ The app resolves its data directory as follows:
 | --- | --- |
 | Linux | `$XDG_DATA_HOME/vaccineshit`, or `~/.local/share/vaccineshit` |
 | macOS | `~/Library/Application Support/VaccineInventory` |
-| Windows | `%LOCALAPPDATA%\VaccineInventory` |
+| Windows | Folder that contains `VacTrack.exe`; `%LOCALAPPDATA%\VaccineInventory` only when that folder is read-only |
 
 The directory contains:
 
@@ -186,6 +194,10 @@ VACCINESHIT_DATA_DIR=/tmp/vaccineshit-dev wails dev -tags webkit2_41
 
 Migrations run automatically at startup. A pre-migration backup is written to the backup directory before an existing database is upgraded.
 
+If the database file is missing, the app creates a new database and seeds the default `admin` account. Leftover `-wal` or `-shm` files from an interrupted run are moved into `backups/pre-initialize-<timestamp>/` first, so they cannot be attached to the new database.
+
+On Windows the executable folder is the default. If that folder cannot be created or written, the app falls back to the per-user data directory. On first start beside the executable, an existing database and its backups are copied from `%LOCALAPPDATA%\VaccineInventory` when the executable folder has no database yet. On Linux and macOS the per-user data directory is the default, with the executable folder as the fallback. An explicit `VACCINESHIT_DATA_DIR` override never falls back, so tests and development runs stay where they were pointed.
+
 ---
 
 ## Monthly workflow
@@ -200,7 +212,7 @@ Migrations run automatically at startup. A pre-migration backup is written to th
 6. **Adjust received stock.** Use an audited adjustment with a reason when a delivery count was wrong. Adjustments cannot produce negative stock.
 7. **Close the month.** Closing stores each vaccine's closing balance. Routine stock and usage edits are then rejected.
 8. **Reopen only when necessary.** Reopening requires a reason and is recorded in the audit log. Close the month again after corrections.
-9. **Review reports.** Reports show monthly totals, per-vaccine comparisons, daily usage and a forecast. Forecasts use the average of the three most recent complete months, falling back to the most recent complete month, and are planning aids only.
+9. **Review reports.** Reports show monthly totals, per-vaccine comparisons, daily usage and a forecast. Forecasts use the average of the three most recent complete months, falling back to the most recent complete month, and are planning aids only. Print the monthly report, or open any vaccine row and print its individual report, to A4 paper or PDF; choose «الطباعة إلى ملف» in the print dialog to save a PDF.
 10. **Export carefully.** Aggregate CSV is suitable for internal reporting. Patient-level CSV contains confidential health information and must remain local unless an approved process says otherwise.
 
 ### Month states
@@ -234,28 +246,9 @@ The application log is designed to contain technical errors rather than patient 
 
 ## Publishing service
 
-Publishing is optional. The desktop app can be used indefinitely without configuring it.
+Publishing is optional. This build does not include the desktop **Publish** or **Audit** screens. The publication backend and the separate `publicd` service remain available for authorized clients that upload reviewed aggregate snapshots to the API described below.
 
-### 1. Configure the desktop app
-
-In **Settings**:
-
-1. Set the **publishing endpoint** to the public service's HTTPS base URL, for example `https://stats.example.org`. Plain HTTP is accepted only for localhost testing.
-2. Set the **publisher token**. It must be at least 24 characters and must match the public service's `PUBLIC_ADMIN_TOKEN`.
-3. The token is stored in the operating-system keychain when available. If no keychain is available, it is stored in a private `0600` file in the app data directory. The token is never written to SQLite, returned to the frontend, or logged.
-
-### 2. Preview and publish
-
-Open **Publish**:
-
-1. Choose the month. The **preview** loads automatically and shows the exact aggregate payload. Use **Refresh preview** after changing local data.
-2. Review the warnings. An open month is provisional and requires an explicit confirmation. Active vaccines without a monthly row are excluded and reported in the warnings.
-3. Publish. If local data changed after the preview, publishing is refused with `preview_stale`; refresh the preview and review it again.
-4. Unpublish to remove the current public snapshot. Local data and local publication history are retained.
-
-The public service de-duplicates by snapshot id. A retry after a network failure is safe: the same snapshot id and content returns the existing version, while reusing an id with different content is rejected.
-
-### 3. Run `publicd`
+### 1. Run `publicd`
 
 Build and run the separate service:
 
@@ -313,8 +306,8 @@ published/<id>.json     # historical snapshots, retained for idempotency
 
 - **No current snapshot is intended:** `DELETE /api/admin/snapshot`, or remove `current.json` while the service is stopped.
 - **Restore a previous snapshot:** stop the service, copy the desired `published/<id>.json` to `current.json`, then start the service. Keep file ownership and `0600` permissions.
-- **Lost the data directory:** republish from the desktop app. Local publication history records the endpoint, version and payload hash.
-- **Rotate the token:** change `PUBLIC_ADMIN_TOKEN` on the service and update the desktop token in Settings. The old token stops working immediately.
+- **Lost the data directory:** republish through the snapshot API. Local publication history records the endpoint, version and payload hash.
+- **Rotate the token:** change `PUBLIC_ADMIN_TOKEN` on the service and update the token held by the publishing client. The old token stops working immediately.
 - **Back up the public service:** back up `PUBLIC_DATA_DIR` and the static site directory. The public service has no access to the desktop database.
 
 ---
@@ -356,21 +349,29 @@ npm run build
 cd ..
 
 go generate ./migrations
-go vet ./...
-go test ./...
+go vet . ./cmd/... ./internal/... ./migrations/...
+go test -race . ./cmd/... ./internal/... ./migrations/...
 sqlc diff
+```
+
+For a production audit, also run:
+
+```sh
+staticcheck ./...
+govulncheck ./...
+cd frontend && npm audit --omit=dev
 ```
 
 The root Go package embeds `frontend/dist`, so build the frontend before running `go vet`, `go test` or a plain `go build` on a fresh checkout. `wails dev` and `wails build` perform that step automatically.
 
-`go test ./...` may report a harmless package under `frontend/node_modules`; it is not part of the application.
+Package paths above exclude `frontend/node_modules`, which can contain unrelated Go files and is not part of the application.
 
 ### Changing the schema
 
 1. Add a new ordered SQL file under `migrations/` (for example `0002_add_column.sql`). Do not edit an already-applied migration.
 2. Run `go generate ./migrations` to regenerate `migrations/migrations_generated.go`.
 3. Update `internal/store/queries/*.sql` and run `sqlc generate`.
-4. Run `sqlc diff`, `go vet ./...` and `go test ./...`.
+4. Run `sqlc diff`, `go vet . ./cmd/... ./internal/... ./migrations/...` and `go test . ./cmd/... ./internal/... ./migrations/...`.
 5. Start the app against a copy of a real-shaped database and confirm the pre-migration backup and upgrade.
 
 ### Changing bound methods
@@ -415,7 +416,15 @@ go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.1
 
 ### The app opens to a recovery screen
 
-The database could not be opened or migrated. The screen shows the data-directory and database paths. Check free disk space and file permissions, then restore a verified backup from the recovery screen. Do not delete the database before preserving a copy.
+The database could not be opened or migrated. The screen shows the data-directory and database paths and offers three actions:
+
+- **Retry startup** after fixing free disk space, file permissions, or a process that still holds the database.
+- **Restore a verified backup.** The current database is preserved as `backups/pre-restore-<timestamp>.db`, and a failed restore is rolled back automatically.
+- **Initialize a new empty database.** Use this only when the existing file is corrupt and no valid backup exists. The app first moves the current database and its `-wal`/`-shm` files into `backups/pre-initialize-<timestamp>/`, then creates an empty database and seeds `admin` / `admin123`. Change that password immediately after signing in.
+
+  If the old file cannot be moved because Windows still holds it open, the app creates `vaccineshit-recovered-<timestamp>.db` beside it and records the active file in `active-database.txt`, so later starts reuse the new database. The old files stay untouched for repair. If the data directory itself cannot be written, the app retries in the per-user data directory and reports the new location.
+
+Do not delete the database file manually before preserving a copy.
 
 ### `database is locked`
 
@@ -423,21 +432,24 @@ The app serializes writes in one process, but another process may be holding the
 
 ### Publishing returns `preview_stale`
 
-The underlying monthly data changed after the preview. Refresh the preview, review the figures and publish again.
+The underlying monthly data changed after the preview. Rebuild the preview, review the figures and publish again.
 
 ### Publishing returns an authentication error
 
-The desktop token and `PUBLIC_ADMIN_TOKEN` must match exactly and be at least 24 characters. Update both after rotation. Verify the endpoint is the HTTPS base URL, not a path to `/api/admin/snapshot`.
+The publishing client token and `PUBLIC_ADMIN_TOKEN` must match exactly and be at least 24 characters. Update both after rotation. Verify the endpoint is the HTTPS base URL, not a path to `/api/admin/snapshot`.
 
 ### The public site says no statistics are published
 
-Nothing is currently published, or the desktop app has not successfully published since the last unpublish. Check `GET /api/public/snapshot` and the publication history in the desktop app.
+Nothing is currently published, or no snapshot has been uploaded since the last unpublish. Check `GET /api/public/snapshot` and the public service publication store.
 
 ---
 
 ## Limitations
 
-- Single-user desktop design; no login, roles, multi-user concurrency, or audit attribution beyond the local workstation.
+- Single-workstation desktop design; role checks exist but there is no multi-user concurrency or remote access.
+- Station-wide operations (backups, restore, publishing, settings, user management, audit review, vaccine deletion) require an admin account.
+- Backup files remain unencrypted and unsigned, so protect the destination folder.
+- Password recovery for a lost admin password still requires a verified backup or removing the local `users` rows so the default account is seeded again on the next start. Admins can reset other users' passwords from Settings.
 - No synchronization or remote database access.
 - No application-level database encryption; rely on OS permissions and full-disk encryption.
 - No automatic backup retention.

@@ -371,7 +371,7 @@ JOIN patients p ON p.id = ue.patient_id
 JOIN vaccines v ON v.id = ue.vaccine_id
 WHERE ue.patient_id = ?
 ORDER BY ue.administered_on DESC, ue.id DESC
-LIMIT ?
+LIMIT CASE WHEN CAST(?2 AS INTEGER) > 0 THEN CAST(?2 AS INTEGER) ELSE -1 END
 `
 
 type ListUsageEntriesForPatientParams struct {

@@ -478,7 +478,7 @@ func TestAggregateAndPatientCSVPrivacyBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(patientCSV)
-	if !strings.Contains(text, "CONFIDENTIAL") || !strings.Contains(text, patient.FullName) {
+	if !strings.Contains(text, "تحذير") || !strings.Contains(text, "معلومات صحية") || !strings.Contains(text, patient.FullName) {
 		t.Fatal("patient CSV is missing its warning or patient data")
 	}
 	if strings.Contains(text, "Synthetic Patient A") {

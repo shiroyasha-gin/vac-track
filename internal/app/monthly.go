@@ -10,7 +10,7 @@ import (
 func (a *App) MonthOverview(month string) (MonthOverviewDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return MonthOverviewDTO{}, a.userError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -27,7 +27,7 @@ func (a *App) MonthOverview(month string) (MonthOverviewDTO, error) {
 func (a *App) InitializeInventory(input InitializeInventoryInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -40,7 +40,7 @@ func (a *App) InitializeInventory(input InitializeInventoryInputDTO) ActionResul
 	if err != nil {
 		return a.actionError(err)
 	}
-	result := Result("Monthly stock initialized.")
+	result := Result("تمت تهيئة مخزون الشهر.")
 	result.EntityID = created.ID
 	return result
 }
@@ -49,7 +49,7 @@ func (a *App) InitializeInventory(input InitializeInventoryInputDTO) ActionResul
 func (a *App) UpdateStock(input UpdateInventoryInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -61,14 +61,14 @@ func (a *App) UpdateStock(input UpdateInventoryInputDTO) ActionResult {
 	}); err != nil {
 		return a.actionError(err)
 	}
-	return Result("Monthly stock saved.")
+	return Result("تم حفظ مخزون الشهر.")
 }
 
 // AdjustStock applies an audited correction to received stock.
 func (a *App) AdjustStock(input AdjustmentInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -79,14 +79,14 @@ func (a *App) AdjustStock(input AdjustmentInputDTO) ActionResult {
 	}); err != nil {
 		return a.actionError(err)
 	}
-	return Result("Stock adjustment recorded.")
+	return Result("تم تسجيل تعديل المخزون.")
 }
 
 // CloseMonth freezes all open inventory rows for the month.
 func (a *App) CloseMonth(month string) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -95,14 +95,14 @@ func (a *App) CloseMonth(month string) ActionResult {
 	if err != nil {
 		return a.actionError(err)
 	}
-	return Result(fmt.Sprintf("Month closed. %d vaccine row(s) frozen.", count))
+	return Result(fmt.Sprintf("أُغلق الشهر. جُمّد %d صف لقاح.", count))
 }
 
 // ReopenMonth requires a reason and is audited.
 func (a *App) ReopenMonth(month, reason string) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -111,14 +111,14 @@ func (a *App) ReopenMonth(month, reason string) ActionResult {
 	if err != nil {
 		return a.actionError(err)
 	}
-	return Result(fmt.Sprintf("Month reopened. %d vaccine row(s) unlocked.", count))
+	return Result(fmt.Sprintf("أُعيد فتح الشهر. فُكّ تجميد %d صف لقاح.", count))
 }
 
 // UsageForVaccineDay returns private detail for one monthly table cell.
 func (a *App) UsageForVaccineDay(vaccineID int64, month, date string) ([]UsageRowDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return nil, a.userError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -138,7 +138,7 @@ func (a *App) UsageForVaccineDay(vaccineID int64, month, date string) ([]UsageRo
 func (a *App) UsageForVaccineMonth(vaccineID int64, month string) ([]UsageRowDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return nil, a.userError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -159,7 +159,7 @@ func (a *App) UsageForVaccineMonth(vaccineID int64, month string) ([]UsageRowDTO
 func (a *App) CreateUsage(input CreateUsageInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -171,7 +171,7 @@ func (a *App) CreateUsage(input CreateUsageInputDTO) ActionResult {
 	if err != nil {
 		return a.actionError(err)
 	}
-	out := Result(fmt.Sprintf("Usage recorded. Remaining stock: %d.", result.Balance))
+	out := Result(fmt.Sprintf("سُجّل الاستخدام. المخزون المتبقي: %d.", result.Balance))
 	out.EntityID = result.Entry.ID
 	return out
 }
@@ -180,7 +180,7 @@ func (a *App) CreateUsage(input CreateUsageInputDTO) ActionResult {
 func (a *App) UpdateUsage(input UpdateUsageInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -192,7 +192,7 @@ func (a *App) UpdateUsage(input UpdateUsageInputDTO) ActionResult {
 	if err != nil {
 		return a.actionError(err)
 	}
-	out := Result(fmt.Sprintf("Usage entry corrected. Remaining stock: %d.", result.Balance))
+	out := Result(fmt.Sprintf("صُحّح قيد الاستخدام. المخزون المتبقي: %d.", result.Balance))
 	out.EntityID = result.Entry.ID
 	return out
 }
@@ -201,7 +201,7 @@ func (a *App) UpdateUsage(input UpdateUsageInputDTO) ActionResult {
 func (a *App) VoidUsage(input VoidUsageInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -210,7 +210,7 @@ func (a *App) VoidUsage(input VoidUsageInputDTO) ActionResult {
 	if err != nil {
 		return a.actionError(err)
 	}
-	out := Result(fmt.Sprintf("Usage entry voided. Remaining stock: %d.", result.Balance))
+	out := Result(fmt.Sprintf("أُلغي قيد الاستخدام. المخزون المتبقي: %d.", result.Balance))
 	out.EntityID = result.Entry.ID
 	return out
 }
@@ -219,7 +219,7 @@ func (a *App) VoidUsage(input VoidUsageInputDTO) ActionResult {
 func (a *App) GetUsage(id int64) (UsageEntryDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return UsageEntryDTO{}, a.userError(err)
 	}
 	ctx, cancel := a.opContext()

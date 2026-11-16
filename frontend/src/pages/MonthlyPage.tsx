@@ -103,8 +103,7 @@ export function MonthlyPage() {
     <>
       <PageHeader
         title={`المخزون الشهري · ${monthLabel(month)}`}
-        description="سجلات محلية خاصة لشهر واحد. انقر على يوم مرقّم لعرض الجرعات المعطاة في ذلك اليوم أو تسجيلها. لا يمكن نشر سوى الإجماليات الشهرية المجمعة."
-      >
+>
         <IconButton label="تحديث الجدول الشهري" onClick={overview.reload}>
           <RefreshCw className="h-4 w-4" />
         </IconButton>
@@ -179,31 +178,29 @@ export function MonthlyPage() {
           <Card>
             <CardHeader
               title="جدول الاستخدام اليومي"
-              description="تعرض كل خلية الجرعات الفعلية المسجلة لذلك اللقاح في ذلك اليوم. الأشهر المغلقة للقراءة فقط حتى يُعاد فتحها بسبب."
-              action={<Badge tone="slate">{data.days} يوماً</Badge>}
+action={<Badge tone="slate">{data.days} يوماً</Badge>}
             />
             {rows.length === 0 ? (
               <EmptyState
                 icon={<Boxes className="h-5 w-5" />}
                 title="لا توجد لقاحات في الكتالوج"
-                description="أضف لقاحاً واحداً على الأقل في صفحة اللقاحات، ثم هيئ مخزونه الشهري."
-              />
+/>
             ) : (
-              <div className="table-scroll max-h-[calc(100vh-22rem)] min-h-[240px]">
-                <table className="data-table" style={{ minWidth: Math.max(760, 650 + days * 34) }}>
+              <div className="table-scroll">
+                <table className="data-table data-table--sticky-first" style={{ minWidth: Math.max(760, 650 + days * 34) }}>
                   <thead>
                     <tr>
                       <th className="min-w-[190px]">اللقاح</th>
                       <th className="text-end">الافتتاحي</th>
                       <th className="text-end">الوارد</th>
+                      <th className="text-end">الاستخدام</th>
+                      <th className="text-end">المتبقي</th>
+                      <th className="text-end">الإجراءات</th>
                       {Array.from({ length: days }, (_, index) => (
                         <th key={index} className="w-[34px] px-1 text-center">
                           {index + 1}
                         </th>
                       ))}
-                      <th className="text-end">الاستخدام</th>
-                      <th className="text-end">المتبقي</th>
-                      <th className="text-end">الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -229,27 +226,6 @@ export function MonthlyPage() {
                           <td className="text-end text-sm tabular-nums">
                             {row.initialized ? formatInteger(row.stockReceived) : '—'}
                           </td>
-                          {Array.from({ length: days }, (_, index) => {
-                            const count = daily[index] ?? 0;
-                            const date = `${month}-${String(index + 1).padStart(2, '0')}`;
-                            return (
-                              <td key={index} className="px-1 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => openUsage(row, date)}
-                                  title={`${formatDate(date)} · ${count} جرعة فعلية`}
-                                  className={cn(
-                                    'focus-ring mx-auto flex h-7 w-8 items-center justify-center rounded-md text-xs tabular-nums transition-colors',
-                                    count > 0
-                                      ? 'bg-emerald-500/15 font-semibold text-emerald-200 hover:bg-emerald-500/25'
-                                      : 'text-slate-600 hover:bg-slate-800 hover:text-slate-300',
-                                  )}
-                                >
-                                  {count > 0 ? count : '·'}
-                                </button>
-                              </td>
-                            );
-                          })}
                           <td className="text-end">
                             {row.initialized ? (
                               <button
@@ -288,6 +264,27 @@ export function MonthlyPage() {
                               </IconButton>
                             </div>
                           </td>
+                          {Array.from({ length: days }, (_, index) => {
+                            const count = daily[index] ?? 0;
+                            const date = `${month}-${String(index + 1).padStart(2, '0')}`;
+                            return (
+                              <td key={index} className="px-1 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => openUsage(row, date)}
+                                  title={`${formatDate(date)} · ${count} جرعة فعلية`}
+                                  className={cn(
+                                    'focus-ring mx-auto flex h-7 w-8 items-center justify-center rounded-md text-xs tabular-nums transition-colors',
+                                    count > 0
+                                      ? 'bg-emerald-500/15 font-semibold text-emerald-200 hover:bg-emerald-500/25'
+                                      : 'text-slate-600 hover:bg-slate-800 hover:text-slate-300',
+                                  )}
+                                >
+                                  {count > 0 ? count : '·'}
+                                </button>
+                              </td>
+                            );
+                          })}
                         </tr>
                       );
                     })}
@@ -300,8 +297,7 @@ export function MonthlyPage() {
           <Card>
             <CardHeader
               title="تعديلات المخزون المدققة"
-              description="تصحيحات على المخزون الوارد لهذا الشهر. لا تعيد التعديلات كتابة سجل الاستخدام."
-              action={<Badge tone="slate">{data.adjustments.length}</Badge>}
+action={<Badge tone="slate">{data.adjustments.length}</Badge>}
             />
             {data.adjustments.length === 0 ? (
               <EmptyState icon={<PencilLine className="h-5 w-5" />} title="لا توجد تعديلات مخزون هذا الشهر" />

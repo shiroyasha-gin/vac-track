@@ -20,7 +20,7 @@ var version = "0.1.0"
 func main() {
 	application := app.NewApp(version)
 	err := wails.Run(&options.App{
-		Title:     "مخزون اللقاحات",
+		Title:     "VacTrack",
 		Width:     1440,
 		Height:    900,
 		MinWidth:  1100,

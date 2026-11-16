@@ -119,7 +119,7 @@ JOIN patients p ON p.id = ue.patient_id
 JOIN vaccines v ON v.id = ue.vaccine_id
 WHERE ue.patient_id = ?
 ORDER BY ue.administered_on DESC, ue.id DESC
-LIMIT ?;
+LIMIT CASE WHEN CAST(sqlc.arg(limit) AS INTEGER) > 0 THEN CAST(sqlc.arg(limit) AS INTEGER) ELSE -1 END;
 
 -- name: SumActiveUsageForVaccineMonth :one
 SELECT CAST(COALESCE(SUM(quantity), 0) AS INTEGER) FROM usage_entries

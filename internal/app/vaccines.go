@@ -8,7 +8,7 @@ import (
 func (a *App) ListVaccines(includeArchived bool) ([]VaccineDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return nil, a.userError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -28,7 +28,7 @@ func (a *App) ListVaccines(includeArchived bool) ([]VaccineDTO, error) {
 func (a *App) CreateVaccine(input VaccineInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -40,7 +40,7 @@ func (a *App) CreateVaccine(input VaccineInputDTO) ActionResult {
 	if err != nil {
 		return a.actionError(err)
 	}
-	result := Result("Vaccine added.")
+	result := Result("تمت إضافة اللقاح.")
 	result.EntityID = created.ID
 	return result
 }
@@ -49,7 +49,7 @@ func (a *App) CreateVaccine(input VaccineInputDTO) ActionResult {
 func (a *App) UpdateVaccine(id int64, input VaccineInputDTO) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -61,7 +61,7 @@ func (a *App) UpdateVaccine(id int64, input VaccineInputDTO) ActionResult {
 	if err != nil {
 		return a.actionError(err)
 	}
-	result := Result("Vaccine saved.")
+	result := Result("تم حفظ بيانات اللقاح.")
 	result.EntityID = updated.ID
 	return result
 }
@@ -70,7 +70,7 @@ func (a *App) UpdateVaccine(id int64, input VaccineInputDTO) ActionResult {
 func (a *App) SetVaccineArchived(id int64, archived bool) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -79,16 +79,16 @@ func (a *App) SetVaccineArchived(id int64, archived bool) ActionResult {
 		return a.actionError(err)
 	}
 	if archived {
-		return Result("Vaccine archived. Historical usage and inventory are retained.")
+		return Result("تمت أرشفة اللقاح مع الاحتفاظ بسجل الاستخدام والمخزون.")
 	}
-	return Result("Vaccine reactivated.")
+	return Result("تمت إعادة تنشيط اللقاح.")
 }
 
 // DeleteVaccine permanently removes an archived vaccine with no history.
 func (a *App) DeleteVaccine(id int64) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.adminReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -96,5 +96,5 @@ func (a *App) DeleteVaccine(id int64) ActionResult {
 	if err := a.services.Vaccines.Delete(ctx, id); err != nil {
 		return a.actionError(err)
 	}
-	return Result("Vaccine deleted.")
+	return Result("تم حذف اللقاح.")
 }

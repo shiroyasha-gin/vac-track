@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,23 @@ func testDB(t *testing.T) *DB {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	return db
+}
+
+func TestDataSourceNameUsesFileURIForWindowsDrivePath(t *testing.T) {
+	dsn := dataSourceName(`C:\Users\clinic\app.db`, 2*time.Second)
+	if !strings.HasPrefix(dsn, "file:///C:/Users/clinic/app.db?") {
+		t.Fatalf("windows DSN = %q, want file:///C:/Users/clinic/app.db?...", dsn)
+	}
+	if strings.Contains(dsn, "file://C:") {
+		t.Fatalf("windows DSN treats the drive letter as a URI authority: %q", dsn)
+	}
+}
+
+func TestDataSourceNameKeepsPOSIXPath(t *testing.T) {
+	dsn := dataSourceName("/var/lib/vaccineshit/app.db", 2*time.Second)
+	if !strings.HasPrefix(dsn, "file:///var/lib/vaccineshit/app.db?") {
+		t.Fatalf("POSIX DSN = %q, want file:///var/lib/vaccineshit/app.db?...", dsn)
+	}
 }
 
 func createVaccineParams(now string) generated.CreateVaccineParams {

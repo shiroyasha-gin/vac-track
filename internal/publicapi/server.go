@@ -8,12 +8,16 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -96,7 +100,7 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 	mux.Handle("GET /", s.publicOnly(s.static()))
-	return securityHeaders(mux), nil
+	return securityHeaders(recoverPanics(logger, mux)), nil
 }
 
 // securityHeaders applies conservative defaults to every response.
@@ -106,8 +110,35 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "no-referrer")
+		// Ignored over plain HTTP; honored when TLS terminates here or at a
+		// reverse proxy that forwards the response headers.
+		h.Set("Strict-Transport-Security", "max-age=31536000")
+		h.Set("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// recoverPanics keeps one bad request from terminating the public service and
+// logs the panic locally instead of exposing it to the caller.
+func recoverPanics(logger *slog.Logger, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			value := recover()
+			if value == nil {
+				return
+			}
+			if value == http.ErrAbortHandler {
+				panic(value)
+			}
+			logger.Error("panic serving request",
+				"panic", fmt.Sprint(value),
+				"method", r.Method,
+				"path", r.URL.Path,
+				"stack", string(debug.Stack()))
+			writeError(w, http.StatusInternalServerError, "The request could not be completed.")
+		}()
 		next.ServeHTTP(w, r)
 	})
 }
@@ -126,7 +157,7 @@ func (s *server) publicOnly(next http.Handler) http.Handler {
 func (s *server) adminOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		if !s.public.allow(s.clientKey(r)) || !s.admin.allow(s.clientKey(r)) {
+		if !s.admin.allow(s.clientKey(r)) {
 			w.Header().Set("Retry-After", "30")
 			writeError(w, http.StatusTooManyRequests, "Too many requests.")
 			return
@@ -154,7 +185,8 @@ func (s *server) authorized(r *http.Request) bool {
 }
 
 func (s *server) publish(w http.ResponseWriter, r *http.Request) {
-	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(strings.ToLower(ct), "application/json") {
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || mediaType != "application/json" {
 		writeError(w, http.StatusUnsupportedMediaType, "Content-Type must be application/json.")
 		return
 	}
@@ -244,19 +276,21 @@ func (s *server) static() http.Handler {
 	}
 	files := http.FileServer(http.Dir(s.publicDir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/"))
-		if path == "." {
-			path = "index.html"
+		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+		if name == "" {
+			name = "index.html"
 		}
-		if strings.HasPrefix(path, "..") {
+		full := filepath.Join(s.publicDir, filepath.FromSlash(name))
+		rel, err := filepath.Rel(s.publicDir, full)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			http.NotFound(w, r)
 			return
 		}
-		if info, err := os.Stat(filepath.Join(s.publicDir, path)); err != nil || info.IsDir() {
+		if info, err := os.Stat(full); err != nil || info.IsDir() {
 			http.NotFound(w, r)
 			return
 		}
-		if strings.HasSuffix(path, ".html") {
+		if strings.HasSuffix(name, ".html") {
 			w.Header().Set("Cache-Control", "no-cache")
 		} else {
 			w.Header().Set("Cache-Control", "public, max-age=300")
@@ -293,11 +327,14 @@ func decodeStrictJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 			return maxErr
 		}
 		if errors.Is(err, io.EOF) {
+			//lint:ignore ST1005 this message is returned verbatim by the API
 			return errors.New("Request body is empty.")
 		}
+		//lint:ignore ST1005 this message is returned verbatim by the API
 		return errors.New("Request body is not a valid aggregate snapshot.")
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		//lint:ignore ST1005 this message is returned verbatim by the API
 		return errors.New("Request body must contain exactly one JSON object.")
 	}
 	return nil
@@ -321,8 +358,11 @@ func quoteETag(etag string) string {
 }
 
 func matchesETag(header, etag string) bool {
+	if etag == "" {
+		return false
+	}
 	for _, candidate := range strings.Split(header, ",") {
-		candidate = strings.TrimSpace(candidate)
+		candidate = strings.TrimPrefix(strings.TrimSpace(candidate), "W/")
 		if candidate == etag || candidate == "*" {
 			return true
 		}

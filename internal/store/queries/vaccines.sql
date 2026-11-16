@@ -32,7 +32,8 @@ RETURNING *;
 -- name: CountVaccineHistory :one
 SELECT
     (SELECT COUNT(*) FROM usage_entries WHERE usage_entries.vaccine_id = ?) +
-    (SELECT COUNT(*) FROM monthly_inventory WHERE monthly_inventory.vaccine_id = ?) AS history_count;
+    (SELECT COUNT(*) FROM monthly_inventory WHERE monthly_inventory.vaccine_id = ?) +
+    (SELECT COUNT(*) FROM appointment_items WHERE appointment_items.vaccine_id = ?) AS history_count;
 
 -- name: DeleteVaccine :exec
 DELETE FROM vaccines WHERE id = ?;

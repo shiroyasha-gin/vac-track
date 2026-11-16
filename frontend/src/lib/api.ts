@@ -8,7 +8,7 @@ export class ActionError extends Error {
   readonly result: app.ActionResult;
 
   constructor(result: app.ActionResult) {
-    super(result.message || 'The operation did not complete.');
+    super(result.message || 'لم تكتمل العملية.');
     this.name = 'ActionError';
     this.result = result;
   }
@@ -45,12 +45,12 @@ export function errorMessage(error: unknown): string {
     return error.result.message;
   }
   if (typeof error === 'string') {
-    return error || 'The operation did not complete.';
+    return error || 'لم تكتمل العملية.';
   }
   if (error instanceof Error) {
-    return error.message || 'The operation did not complete.';
+    return error.message || 'لم تكتمل العملية.';
   }
-  return 'The operation did not complete.';
+  return 'لم تكتمل العملية.';
 }
 
 export function isActionCode(error: unknown, code: string): boolean {

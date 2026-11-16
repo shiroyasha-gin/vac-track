@@ -14,12 +14,27 @@ WHERE (CAST(sqlc.arg(include_archived) AS INTEGER) = 1 OR is_archived = 0)
     OR full_name LIKE '%' || CAST(sqlc.arg(search) AS TEXT) || '%'
     OR patient_code LIKE '%' || CAST(sqlc.arg(search) AS TEXT) || '%'
   )
-ORDER BY is_archived ASC, full_name COLLATE NOCASE ASC;
+ORDER BY is_archived ASC, full_name COLLATE NOCASE ASC, id ASC
+LIMIT CAST(sqlc.arg(limit_count) AS INTEGER) OFFSET CAST(sqlc.arg(offset_rows) AS INTEGER);
 
--- name: ListActivePatients :many
+-- name: CountPatients :one
+SELECT COUNT(*) FROM patients
+WHERE (CAST(sqlc.arg(include_archived) AS INTEGER) = 1 OR is_archived = 0)
+  AND (
+    CAST(sqlc.arg(search) AS TEXT) = ''
+    OR full_name LIKE '%' || CAST(sqlc.arg(search) AS TEXT) || '%'
+    OR patient_code LIKE '%' || CAST(sqlc.arg(search) AS TEXT) || '%'
+  );
+
+-- name: SearchActivePatients :many
 SELECT * FROM patients
 WHERE is_archived = 0
-ORDER BY full_name COLLATE NOCASE ASC;
+  AND (
+    full_name LIKE '%' || CAST(sqlc.arg(search) AS TEXT) || '%'
+    OR patient_code LIKE '%' || CAST(sqlc.arg(search) AS TEXT) || '%'
+  )
+ORDER BY full_name COLLATE NOCASE ASC
+LIMIT CAST(sqlc.arg(limit_count) AS INTEGER);
 
 -- name: UpdatePatient :one
 UPDATE patients

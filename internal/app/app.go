@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"vaccineshit/internal/appdata"
+	"vaccineshit/internal/audit"
 	"vaccineshit/internal/backup"
 	"vaccineshit/internal/domain"
 	"vaccineshit/internal/publishing"
@@ -47,6 +49,13 @@ type App struct {
 	initErr     error
 	now         func() time.Time
 
+	session *service.SessionUser
+
+	fallbackDataDir func() (string, error)
+
+	loginFailures     int
+	loginBlockedUntil time.Time
+
 	pendingPreview *previewState
 }
 
@@ -65,20 +74,36 @@ func NewApp(version string) *App {
 		version = appVersionFallback
 	}
 	app := &App{version: version, ctx: context.Background()}
-	dataDir, err := appdata.Dir()
+	dataDir, fallback, err := appdata.ResolveDir()
 	if err != nil {
 		app.initErr = fmt.Errorf("resolve application data directory: %w", err)
 		return app
 	}
+	migrated, migrationErr := appdata.MigrateLegacyData(dataDir)
 	app.configurePaths(dataDir)
-	if err := appdata.EnsureDir(dataDir); err != nil {
-		app.initErr = err
+	app.initLogging()
+	if migrated {
+		app.logf("migrated existing data beside executable", "path", dataDir)
+	}
+	if migrationErr != nil {
+		app.initErr = fmt.Errorf("migrate existing data to %s: %w", dataDir, migrationErr)
 		return app
 	}
-	app.initLogging()
+	if fallback {
+		app.logf("using fallback data directory", "path", dataDir)
+	}
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	if err := app.openLocked(); err != nil {
+		if !fallback && isFilesystemError(err) {
+			if rebaseErr := app.rebaseToFallbackLocked(); rebaseErr == nil {
+				if retryErr := app.openLocked(); retryErr == nil {
+					return app
+				} else {
+					err = retryErr
+				}
+			}
+		}
 		app.initErr = err
 	}
 	return app
@@ -103,16 +128,85 @@ func newAppAt(dataDir, version string) *App {
 
 func (a *App) configurePaths(dataDir string) {
 	a.dataDir = dataDir
-	a.dbPath = filepath.Join(dataDir, "vaccineshit.db")
+	a.dbPath = rememberedDatabasePath(dataDir)
 	a.backupDir = filepath.Join(dataDir, "backups")
 	a.logPath = filepath.Join(dataDir, "application.log")
 	a.now = func() time.Time { return time.Now().UTC() }
 	a.credentials = publishing.NewCredentials(publishing.DefaultFallbackPath(dataDir))
 	a.client = publishing.NewClient()
 	a.backups = backup.New(nil, a.dbPath, a.backupDir)
+	a.fallbackDataDir = appdata.DirNextToExecutable
+}
+
+// rebaseToFallbackLocked moves the app to the executable's directory when the
+// preferred data directory cannot hold the database. a.mu must be held and no
+// store may be open.
+func (a *App) rebaseToFallbackLocked() error {
+	if a.fallbackDataDir == nil {
+		return errors.New("fallback data directory is unavailable")
+	}
+	dir, err := a.fallbackDataDir()
+	if err != nil {
+		return err
+	}
+	if dir == "" || samePath(dir, a.dataDir) {
+		return errors.New("fallback data directory is the current data directory")
+	}
+	if err := appdata.EnsureExecutableDir(dir); err != nil {
+		return err
+	}
+	a.rebaseLocked(dir)
+	return nil
+}
+
+// rebaseLocked switches every path and log to dir. a.mu must be held.
+func (a *App) rebaseLocked(dir string) {
+	a.configurePaths(dir)
+	a.initLogging()
+	a.logf("switched data directory next to executable", "path", dir)
+}
+
+func samePath(a, b string) bool {
+	absA, errA := filepath.Abs(a)
+	absB, errB := filepath.Abs(b)
+	if errA != nil || errB != nil {
+		return a == b
+	}
+	return absA == absB
+}
+
+// isFilesystemError reports whether err points at a directory or file the
+// process cannot use. Corrupt-database errors are not included, so a damaged
+// database still opens the recovery screen instead of a silent new location.
+func isFilesystemError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, fs.ErrPermission) {
+		return true
+	}
+	message := strings.ToLower(err.Error())
+	for _, fragment := range []string{
+		"permission denied",
+		"operation not permitted",
+		"read-only file system",
+		"no space left",
+		"disk full",
+		"unable to open database file",
+	} {
+		if strings.Contains(message, fragment) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *App) initLogging() {
+	if a.logFile != nil {
+		_ = a.logFile.Sync()
+		_ = a.logFile.Close()
+		a.logFile = nil
+	}
 	file, err := os.OpenFile(a.logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		a.logger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -159,7 +253,10 @@ func (a *App) openLocked() error {
 		a.store = nil
 		a.services = nil
 	}
-	ctx, cancel := context.WithTimeout(a.context(), 30*time.Second)
+	if err := a.prepareDatabaseLocked(); err != nil {
+		return err
+	}
+	ctx, cancel := a.databaseContext()
 	defer cancel()
 	store, err := sqlite.Open(ctx, sqlite.Config{
 		Path:      a.dbPath,
@@ -170,6 +267,15 @@ func (a *App) openLocked() error {
 	}
 	a.store = store
 	a.services = service.New(store, service.Options{})
+	if err := a.services.Users.EnsureDefaultAdmin(ctx); err != nil {
+		_ = store.Close()
+		a.store = nil
+		a.services = nil
+		return fmt.Errorf("seed default operator: %w", err)
+	}
+	a.session = nil
+	a.loginFailures = 0
+	a.loginBlockedUntil = time.Time{}
 	a.backups = backup.New(store.DB(), store.Path(), a.backupDir)
 	a.initErr = nil
 	a.pendingPreview = nil
@@ -207,7 +313,7 @@ func (a *App) Bootstrap() BootstrapInfo {
 		CurrentMonth: time.Now().UTC().Format("2006-01"),
 	}
 	if a.services == nil {
-		message := "The local database could not be opened."
+		message := "تعذر فتح قاعدة البيانات المحلية."
 		if a.initErr != nil {
 			message = a.initErr.Error()
 		}
@@ -263,29 +369,27 @@ func (a *App) userError(err error) error {
 		return err
 	}
 	if errors.Is(err, context.Canceled) {
-		return errors.New("The operation was cancelled.")
+		return errors.New("تم إلغاء العملية.")
 	}
 	a.logf("operation failed", "error", err)
-	return errors.New("The operation could not be completed. Details were written to the local application log.")
+	return errors.New("تعذر إكمال العملية. كُتبت التفاصيل في سجل التطبيق المحلي.")
 }
 
 func (a *App) actionError(err error) ActionResult {
 	if err == nil {
-		return failedResult(domain.CodeInvalidInput, "", "The operation did not complete.")
+		return failedResult(domain.CodeInvalidInput, "", "لم تكتمل العملية.")
 	}
 	if de, ok := domain.AsError(err); ok {
 		return failedResult(de.Code, de.Field, de.Message)
 	}
 	a.logf("operation failed", "error", err)
-	return failedResult("internal_error", "", "The operation could not be completed. Details were written to the local application log.")
-}
-
-func (a *App) readyError() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.readyLocked()
+	return failedResult("internal_error", "", "تعذر إكمال العملية. كُتبت التفاصيل في سجل التطبيق المحلي.")
 }
 
 func (a *App) opContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(a.context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(a.context(), 30*time.Second)
+	if a.session != nil {
+		ctx = audit.WithActor(ctx, audit.Actor{ID: a.session.ID, Username: a.session.Username})
+	}
+	return ctx, cancel
 }

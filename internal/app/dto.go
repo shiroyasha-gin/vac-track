@@ -70,6 +70,14 @@ type PatientDTO struct {
 	UpdatedAt   string `json:"updatedAt"`
 }
 
+// PatientPageDTO is one bounded page of local patient records.
+type PatientPageDTO struct {
+	Items  []PatientDTO `json:"items"`
+	Total  int64        `json:"total"`
+	Limit  int64        `json:"limit"`
+	Offset int64        `json:"offset"`
+}
+
 // VaccineInputDTO is the validated catalog form payload.
 type VaccineInputDTO struct {
 	Name        string `json:"name"`
@@ -207,6 +215,110 @@ type UsageRowDTO struct {
 	VaccineName     string `json:"vaccineName"`
 	VaccineCode     string `json:"vaccineCode"`
 	VaccineUnit     string `json:"vaccineUnit"`
+}
+
+// AppointmentItemDTO is one vaccine line in a private appointment.
+type AppointmentItemDTO struct {
+	ID                  int64  `json:"id"`
+	VaccineID           int64  `json:"vaccineId"`
+	VaccineName         string `json:"vaccineName"`
+	VaccineCode         string `json:"vaccineCode"`
+	VaccineUnit         string `json:"vaccineUnit"`
+	VaccineArchived     bool   `json:"vaccineArchived"`
+	Quantity            int64  `json:"quantity"`
+	UsageEntryID        int64  `json:"usageEntryId"`
+	UsageVoided         bool   `json:"usageVoided"`
+	UsageVoidReason     string `json:"usageVoidReason"`
+	UsageAdministeredOn string `json:"usageAdministeredOn"`
+	UsageQuantity       int64  `json:"usageQuantity"`
+	CreatedAt           string `json:"createdAt"`
+	UpdatedAt           string `json:"updatedAt"`
+}
+
+// AppointmentDTO is a private scheduled visit with its vaccine lines and linked
+// usage state.
+type AppointmentDTO struct {
+	ID              int64                `json:"id"`
+	PatientID       int64                `json:"patientId"`
+	PatientName     string               `json:"patientName"`
+	PatientCode     string               `json:"patientCode"`
+	PatientArchived bool                 `json:"patientArchived"`
+	Items           []AppointmentItemDTO `json:"items"`
+	ScheduledOn     string               `json:"scheduledOn"`
+	ScheduledTime   string               `json:"scheduledTime"`
+	Note            string               `json:"note"`
+	Status          string               `json:"status"`
+	CancelReason    string               `json:"cancelReason"`
+	CompletedAt     string               `json:"completedAt"`
+	CancelledAt     string               `json:"cancelledAt"`
+	CreatedAt       string               `json:"createdAt"`
+	UpdatedAt       string               `json:"updatedAt"`
+}
+
+// AppointmentFilterDTO narrows the private appointment list.
+type AppointmentFilterDTO struct {
+	Status   string `json:"status"`
+	FromDate string `json:"fromDate"`
+	ToDate   string `json:"toDate"`
+}
+
+// AppointmentItemInputDTO is one vaccine line in an appointment form.
+type AppointmentItemInputDTO struct {
+	VaccineID int64 `json:"vaccineId"`
+	Quantity  int64 `json:"quantity"`
+}
+
+// AppointmentInputDTO schedules a patient visit and reserves its doses.
+type AppointmentInputDTO struct {
+	PatientID     int64                     `json:"patientId"`
+	ScheduledOn   string                    `json:"scheduledOn"`
+	ScheduledTime string                    `json:"scheduledTime"`
+	Note          string                    `json:"note"`
+	Items         []AppointmentItemInputDTO `json:"items"`
+}
+
+// UpdateAppointmentInputDTO edits a scheduled visit and its linked doses.
+type UpdateAppointmentInputDTO struct {
+	PatientID     int64                     `json:"patientId"`
+	ScheduledOn   string                    `json:"scheduledOn"`
+	ScheduledTime string                    `json:"scheduledTime"`
+	Note          string                    `json:"note"`
+	Items         []AppointmentItemInputDTO `json:"items"`
+	Reason        string                    `json:"reason"`
+}
+
+// CompleteAppointmentInputDTO marks a visit as completed. Doses were already
+// deducted at booking; AdministeredOn optionally moves the linked usage rows to
+// the date the doses were actually given.
+type CompleteAppointmentInputDTO struct {
+	ID             int64  `json:"id"`
+	AdministeredOn string `json:"administeredOn"`
+}
+
+// CancelAppointmentInputDTO cancels a scheduled visit and restores its reserved
+// doses to the same monthly stock.
+type CancelAppointmentInputDTO struct {
+	ID     int64  `json:"id"`
+	Reason string `json:"reason"`
+}
+
+// PatientSummaryDTO is the compact history summary shown at the top of a
+// patient file.
+type PatientSummaryDTO struct {
+	TotalDoses            int64  `json:"totalDoses"`
+	VaccineCount          int    `json:"vaccineCount"`
+	LastDoseOn            string `json:"lastDoseOn"`
+	ScheduledAppointments int    `json:"scheduledAppointments"`
+	NextAppointmentOn     string `json:"nextAppointmentOn"`
+	CompletedAppointments int    `json:"completedAppointments"`
+}
+
+// PatientDetailDTO is the complete local patient file. It is never published.
+type PatientDetailDTO struct {
+	Patient      PatientDTO        `json:"patient"`
+	Summary      PatientSummaryDTO `json:"summary"`
+	Usage        []UsageRowDTO     `json:"usage"`
+	Appointments []AppointmentDTO  `json:"appointments"`
 }
 
 // CreateUsageInputDTO records one dose administration.
@@ -441,6 +553,28 @@ func usageRowDTO(row generated.ListUsageEntriesForVaccineDayRow) UsageRowDTO {
 	}
 }
 
+func appointmentDTO(view service.AppointmentView) AppointmentDTO {
+	items := make([]AppointmentItemDTO, 0, len(view.Items))
+	for _, item := range view.Items {
+		items = append(items, AppointmentItemDTO{
+			ID: item.ID, VaccineID: item.VaccineID, VaccineName: item.VaccineName,
+			VaccineCode: item.VaccineCode, VaccineUnit: item.VaccineUnit,
+			VaccineArchived: item.VaccineArchived, Quantity: item.Quantity,
+			UsageEntryID: item.UsageEntryID, UsageVoided: item.UsageVoided,
+			UsageVoidReason: item.UsageVoidReason, UsageAdministeredOn: item.UsageAdministeredOn,
+			UsageQuantity: item.UsageQuantity, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+		})
+	}
+	return AppointmentDTO{
+		ID: view.ID, PatientID: view.PatientID, PatientName: view.PatientName,
+		PatientCode: view.PatientCode, PatientArchived: view.PatientArchived,
+		Items: items, ScheduledOn: view.ScheduledOn, ScheduledTime: view.ScheduledTime,
+		Note: view.Note, Status: view.Status, CancelReason: view.CancelReason,
+		CompletedAt: view.CompletedAt, CancelledAt: view.CancelledAt,
+		CreatedAt: view.CreatedAt, UpdatedAt: view.UpdatedAt,
+	}
+}
+
 func usageRowPatientDTO(row generated.ListUsageEntriesForPatientRow) UsageRowDTO {
 	return UsageRowDTO{
 		ID: row.ID, PatientID: row.PatientID, VaccineID: row.VaccineID,
@@ -556,7 +690,7 @@ func publicationRecordDTO(p generated.Publication) PublicationRecordDTO {
 
 func backupResult(info backup.Info) BackupResultDTO {
 	return BackupResultDTO{
-		OK: true, Message: "Backup created and verified.",
+		OK: true, Message: "أُنشئت النسخة الاحتياطية وتم التحقق منها.",
 		Path: info.Path, SizeBytes: info.SizeBytes, SHA256: info.SHA256, CreatedAt: info.CreatedAt,
 	}
 }

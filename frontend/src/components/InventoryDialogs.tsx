@@ -120,7 +120,7 @@ export function StockDialog({ open, month, row, onClose, onSaved }: StockDialogP
             </Alert>
           ) : null}
 
-          <div className="rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3 text-xs text-slate-400">
+          <div className="rounded-xl border border-slate-700/60 bg-slate-900 px-4 py-3 text-xs text-slate-500">
             <div className="flex items-center justify-between gap-3">
               <span>الترحيل المقترح</span>
               <span className="font-semibold tabular-nums text-slate-100">{formatInteger(row.suggestedOpening)}</span>
@@ -267,7 +267,7 @@ export function AdjustDialog({ open, month, row, onClose, onSaved }: AdjustDialo
           <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="مثال: تصحيح عدد التوريد" />
         </Field>
         {row ? (
-          <div className="flex items-center justify-between rounded-lg bg-slate-950/60 px-3 py-2 text-xs text-slate-400">
+          <div className="flex items-center justify-between rounded-lg border border-slate-700/60 bg-slate-900 px-3 py-2 text-xs text-slate-500">
             <span>المخزون الوارد الحالي</span>
             <span className="font-semibold tabular-nums text-slate-100">{formatInteger(row.stockReceived)}</span>
           </div>
@@ -378,7 +378,7 @@ export function SetupMonthDialog({ open, month, rows, onClose, onChanged }: Setu
             const value = values[row.vaccineId] || { opening: String(row.suggestedOpening), received: '0', reason: '' };
             const overriding = row.priorExists && Number(value.opening) !== row.suggestedOpening;
             return (
-              <div key={row.vaccineId} className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <div key={row.vaccineId} className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-3">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-[13px] font-medium text-slate-100">{row.vaccineName}</p>

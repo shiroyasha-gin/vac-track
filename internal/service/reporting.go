@@ -273,15 +273,14 @@ func (s *ReportingService) MonthOverview(ctx context.Context, monthStr string) (
 				row.SuggestedOpening = previous.OpeningBalance + previous.StockReceived - prevUsage[vaccine.ID]
 			}
 		}
-		row.LowStock = initialized && domain.IsLowStock(row.Remaining, threshold)
+		row.LowStock = vaccine.IsArchived == 0 && initialized && domain.IsLowStock(row.Remaining, threshold)
 		if vaccine.IsArchived == 0 {
 			totals.ActiveVaccines++
 			if !initialized {
 				totals.UninitializedActive++
+			} else {
+				totals.InitializedVaccines++
 			}
-		}
-		if initialized {
-			totals.InitializedVaccines++
 		}
 		if row.LowStock {
 			totals.LowStockCount++

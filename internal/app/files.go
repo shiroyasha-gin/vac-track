@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"vaccineshit/internal/atomicfile"
 	"vaccineshit/internal/audit"
 	"vaccineshit/internal/store/generated"
 )
@@ -20,23 +20,23 @@ func (a *App) CreateBackup() BackupResultDTO {
 	a.mu.Lock()
 	ctx := a.ctx
 	dir := a.backupDir
-	ready := a.readyLocked() == nil
+	ready := a.adminReadyLocked() == nil
 	a.mu.Unlock()
 	if !ready {
-		return backupFailed("The local database is not available, so a backup cannot be created.")
+		return backupFailed("قاعدة البيانات المحلية غير متاحة، لذلك لا يمكن إنشاء نسخة احتياطية.")
 	}
 	path, err := runtime.SaveFileDialog(ctx, runtime.SaveDialogOptions{
 		DefaultDirectory:     dir,
 		DefaultFilename:      "vaccineshit-backup-" + time.Now().UTC().Format("20060102-150405") + ".db",
-		Title:                "Save verified backup",
+		Title:                "حفظ نسخة احتياطية موثّقة",
 		CanCreateDirectories: true,
 		Filters:              []runtime.FileFilter{{DisplayName: "SQLite database (*.db)", Pattern: "*.db"}},
 	})
 	if err != nil {
-		return backupFailed("The save dialog could not be opened.")
+		return backupFailed("تعذر فتح نافذة الحفظ.")
 	}
 	if strings.TrimSpace(path) == "" {
-		return BackupResultDTO{Code: "cancelled", Message: "Backup cancelled."}
+		return BackupResultDTO{Code: "cancelled", Message: "أُلغيت النسخة الاحتياطية."}
 	}
 	return a.backupTo(path)
 }
@@ -45,7 +45,7 @@ func (a *App) CreateBackup() BackupResultDTO {
 func (a *App) backupTo(path string) BackupResultDTO {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.adminReadyLocked(); err != nil {
 		return backupFailed(a.userError(err).Error())
 	}
 	ctx, cancel := a.opContext()
@@ -53,7 +53,7 @@ func (a *App) backupTo(path string) BackupResultDTO {
 	info, err := a.backups.Create(ctx, path)
 	if err != nil {
 		a.logf("create backup", "error", err)
-		return backupFailed("The backup could not be created. Details were written to the local application log.")
+		return backupFailed("تعذر إنشاء النسخة الاحتياطية. كُتبت التفاصيل في سجل التطبيق المحلي.")
 	}
 	if a.store != nil {
 		if err := a.store.WithTx(ctx, func(q generated.Querier) error {
@@ -75,17 +75,24 @@ func (a *App) RestoreBackup() BackupResultDTO {
 	a.mu.Lock()
 	ctx := a.ctx
 	dir := a.backupDir
+	allowed := a.store == nil
+	if !allowed {
+		allowed = a.adminReadyLocked() == nil
+	}
 	a.mu.Unlock()
+	if !allowed {
+		return backupFailed("استعادة النسخة الاحتياطية متاحة لمسؤول النظام بعد تسجيل الدخول.")
+	}
 	path, err := runtime.OpenFileDialog(ctx, runtime.OpenDialogOptions{
 		DefaultDirectory: dir,
-		Title:            "Choose a verified backup to restore",
+		Title:            "اختر نسخة احتياطية موثّقة للاستعادة",
 		Filters:          []runtime.FileFilter{{DisplayName: "SQLite database (*.db)", Pattern: "*.db"}},
 	})
 	if err != nil {
-		return backupFailed("The open dialog could not be opened.")
+		return backupFailed("تعذر فتح نافذة الاختيار.")
 	}
 	if strings.TrimSpace(path) == "" {
-		return BackupResultDTO{Code: "cancelled", Message: "Restore cancelled."}
+		return BackupResultDTO{Code: "cancelled", Message: "أُلغيت الاستعادة."}
 	}
 	return a.restoreFrom(path)
 }
@@ -102,7 +109,7 @@ func (a *App) restoreFrom(path string) BackupResultDTO {
 	if a.store != nil {
 		if err := a.store.Close(); err != nil {
 			a.logf("close database before restore", "error", err)
-			return backupFailed("The current database could not be closed safely. Restore was not attempted.")
+			return backupFailed("تعذر إغلاق قاعدة البيانات الحالية بأمان. لم تُنفّذ الاستعادة.")
 		}
 		a.store = nil
 		a.services = nil
@@ -111,26 +118,26 @@ func (a *App) restoreFrom(path string) BackupResultDTO {
 	if err != nil {
 		a.logf("prepare restore", "error", err)
 		a.reopenQuietlyLocked()
-		return backupFailed("The chosen backup failed validation. The current database was not changed.")
+		return backupFailed("فشل التحقق من النسخة الاحتياطية المختارة. لم تتغير قاعدة البيانات الحالية.")
 	}
 	if err := prep.CommitAfterClose(); err != nil {
 		a.logf("commit restore", "error", err)
 		prep.Abort()
 		a.reopenQuietlyLocked()
-		return backupFailed("The backup could not be installed. The current database was not changed.")
+		return backupFailed("تعذر تثبيت النسخة الاحتياطية. لم تتغير قاعدة البيانات الحالية.")
 	}
 	if err := a.openLocked(); err != nil {
 		a.logf("open restored database", "error", err)
 		if rollbackErr := prep.Rollback(); rollbackErr != nil {
 			a.logf("roll back restored database", "error", rollbackErr)
 			return backupFailed(fmt.Sprintf(
-				"The restored database could not be opened and automatic rollback failed. Recovery files are in %s.", a.backupDir))
+				"تعذر فتح قاعدة البيانات المستعادة وفشل التراجع التلقائي. ملفات الاسترداد في %s.", a.backupDir))
 		}
 		if reopenErr := a.openLocked(); reopenErr != nil {
 			a.logf("reopen original database", "error", reopenErr)
-			return backupFailed("The restored database could not be opened. The original database was restored but could not be reopened.")
+			return backupFailed("تعذر فتح قاعدة البيانات المستعادة. أُعيدت قاعدة البيانات الأصلية لكن تعذر إعادة فتحها.")
 		}
-		return backupFailed("The restored database could not be opened. The original database was restored.")
+		return backupFailed("تعذر فتح قاعدة البيانات المستعادة. أُعيدت قاعدة البيانات الأصلية.")
 	}
 	if a.store != nil {
 		if err := a.store.WithTx(ctx, func(q generated.Querier) error {
@@ -143,7 +150,7 @@ func (a *App) restoreFrom(path string) BackupResultDTO {
 		}
 	}
 	return BackupResultDTO{
-		OK: true, Message: "Backup restored and verified. The previous database was preserved in the backup folder.",
+		OK: true, Message: "تمت استعادة النسخة الاحتياطية والتحقق منها. حُفظت قاعدة البيانات السابقة في مجلد النسخ الاحتياطية.",
 		Path: path,
 	}
 }
@@ -161,7 +168,7 @@ func backupFailed(message string) BackupResultDTO {
 
 // ExportAggregateCSV asks for a destination and exports aggregate-only data.
 func (a *App) ExportAggregateCSV(month string) ExportResultDTO {
-	path, result, ok := a.chooseExportPath("aggregate-"+month+".csv", "Export monthly aggregate CSV")
+	path, result, ok := a.chooseExportPath("aggregate-"+month+".csv", "تصدير جدول الشهر الإجمالي بصيغة CSV")
 	if !ok {
 		return result
 	}
@@ -173,7 +180,7 @@ func (a *App) ExportAggregateCSV(month string) ExportResultDTO {
 func (a *App) exportAggregateCSVTo(month, path string) ExportResultDTO {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return exportFailed(a.userError(err).Error())
 	}
 	ctx, cancel := a.opContext()
@@ -184,16 +191,16 @@ func (a *App) exportAggregateCSVTo(month, path string) ExportResultDTO {
 	}
 	if err := writeFileAtomic(path, body); err != nil {
 		a.logf("write aggregate export", "error", err)
-		return exportFailed("The aggregate export could not be written.")
+		return exportFailed("تعذر كتابة ملف الإجمالي.")
 	}
 	a.recordExport(ctx, "aggregate", month, len(body), path, false)
-	return ExportResultDTO{OK: true, Message: "Aggregate CSV exported.", Path: path, Bytes: int64(len(body))}
+	return ExportResultDTO{OK: true, Message: "تم تصدير ملف CSV الإجمالي.", Path: path, Bytes: int64(len(body))}
 }
 
 // ExportPatientUsageCSV asks for a destination and exports local, confidential
 // patient-level usage. Notes are omitted by the service.
 func (a *App) ExportPatientUsageCSV(month string) ExportResultDTO {
-	path, result, ok := a.chooseExportPath("patient-usage-"+month+".csv", "Export confidential patient-level usage")
+	path, result, ok := a.chooseExportPath("patient-usage-"+month+".csv", "تصدير استخدامات المرضى السرية")
 	if !ok {
 		return result
 	}
@@ -205,7 +212,7 @@ func (a *App) ExportPatientUsageCSV(month string) ExportResultDTO {
 func (a *App) exportPatientUsageCSVTo(month, path string) ExportResultDTO {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return exportFailed(a.userError(err).Error())
 	}
 	ctx, cancel := a.opContext()
@@ -216,21 +223,21 @@ func (a *App) exportPatientUsageCSVTo(month, path string) ExportResultDTO {
 	}
 	if err := writeFileAtomic(path, body); err != nil {
 		a.logf("write patient export", "error", err)
-		return exportFailed("The patient-level export could not be written.")
+		return exportFailed("تعذر كتابة ملف استخدامات المرضى.")
 	}
 	a.recordExport(ctx, "patient_usage", month, len(body), path, true)
 	return ExportResultDTO{
-		OK: true, Message: "Confidential patient-level CSV exported. Keep this file local.", Path: path, Bytes: int64(len(body)),
+		OK: true, Message: "تم تصدير ملف CSV السري لاستخدامات المرضى. أبقِ هذا الملف محلياً.", Path: path, Bytes: int64(len(body)),
 	}
 }
 
 func (a *App) chooseExportPath(defaultName, title string) (string, ExportResultDTO, bool) {
 	a.mu.Lock()
 	ctx := a.ctx
-	ready := a.readyLocked() == nil
+	gateErr := a.authReadyLocked()
 	a.mu.Unlock()
-	if !ready {
-		return "", exportFailed("The local database is not available."), false
+	if gateErr != nil {
+		return "", exportFailed(a.userError(gateErr).Error()), false
 	}
 	path, err := runtime.SaveFileDialog(ctx, runtime.SaveDialogOptions{
 		DefaultFilename:      defaultName,
@@ -239,10 +246,10 @@ func (a *App) chooseExportPath(defaultName, title string) (string, ExportResultD
 		Filters:              []runtime.FileFilter{{DisplayName: "CSV file (*.csv)", Pattern: "*.csv"}},
 	})
 	if err != nil {
-		return "", exportFailed("The save dialog could not be opened."), false
+		return "", exportFailed("تعذر فتح نافذة الحفظ."), false
 	}
 	if strings.TrimSpace(path) == "" {
-		return "", ExportResultDTO{Code: "cancelled", Message: "Export cancelled."}, false
+		return "", ExportResultDTO{Code: "cancelled", Message: "أُلغي التصدير."}, false
 	}
 	return path, ExportResultDTO{}, true
 }
@@ -273,30 +280,5 @@ func writeFileAtomic(path string, body []byte) error {
 	if strings.TrimSpace(path) == "" {
 		return errors.New("export path is required")
 	}
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	temp, err := os.CreateTemp(dir, ".vaccineshit-export-*.tmp")
-	if err != nil {
-		return err
-	}
-	tempPath := temp.Name()
-	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
-		temp.Close()
-		return err
-	}
-	if _, err := temp.Write(body); err != nil {
-		temp.Close()
-		return err
-	}
-	if err := temp.Sync(); err != nil {
-		temp.Close()
-		return err
-	}
-	if err := temp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tempPath, path)
+	return atomicfile.Write(path, body, 0o600)
 }

@@ -145,25 +145,67 @@ func (s *PatientService) SetArchived(ctx context.Context, id int64, archived boo
 	return result, nil
 }
 
-// List searches locally by name or patient code. No remote request is made.
-func (s *PatientService) List(ctx context.Context, search string, includeArchived bool) ([]generated.Patient, error) {
+// PatientPage is one bounded page of the local patient directory.
+type PatientPage struct {
+	Items  []generated.Patient
+	Total  int64
+	Limit  int64
+	Offset int64
+}
+
+// List searches locally by name or patient code. No remote request is made and
+// the result is always bounded so a large directory cannot freeze the UI.
+func (s *PatientService) List(ctx context.Context, search string, includeArchived bool, limit, offset int64) (PatientPage, error) {
 	search = strings.TrimSpace(search)
 	if len([]rune(search)) > 80 {
-		return nil, domain.NewError(domain.CodeInvalidInput, "search", "نص البحث طويل جداً.")
+		return PatientPage{}, domain.NewError(domain.CodeInvalidInput, "search", "نص البحث طويل جداً.")
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	if offset < 0 {
+		offset = 0
 	}
 	flag := int64(0)
 	if includeArchived {
 		flag = 1
 	}
-	return s.store.Queries().ListPatients(ctx, generated.ListPatientsParams{
+	q := s.store.Queries()
+	total, err := q.CountPatients(ctx, generated.CountPatientsParams{
 		IncludeArchived: flag,
 		Search:          search,
 	})
+	if err != nil {
+		return PatientPage{}, err
+	}
+	items, err := q.ListPatients(ctx, generated.ListPatientsParams{
+		IncludeArchived: flag,
+		Search:          search,
+		LimitCount:      limit,
+		OffsetRows:      offset,
+	})
+	if err != nil {
+		return PatientPage{}, err
+	}
+	return PatientPage{Items: items, Total: total, Limit: limit, Offset: offset}, nil
 }
 
-// ListActive returns non-archived patients for usage entry.
-func (s *PatientService) ListActive(ctx context.Context) ([]generated.Patient, error) {
-	return s.store.Queries().ListActivePatients(ctx)
+// SearchActive returns a bounded set of active patients for search-first pickers.
+func (s *PatientService) SearchActive(ctx context.Context, search string, limit int64) ([]generated.Patient, error) {
+	search = strings.TrimSpace(search)
+	if len([]rune(search)) > 80 {
+		return nil, domain.NewError(domain.CodeInvalidInput, "search", "نص البحث طويل جداً.")
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	return s.store.Queries().SearchActivePatients(ctx, generated.SearchActivePatientsParams{
+		Search:     search,
+		LimitCount: limit,
+	})
 }
 
 // Get returns one patient.

@@ -145,7 +145,6 @@ export function VaccinesPage() {
     <>
       <PageHeader
         title="اللقاحات"
-        description="يغذي الكتالوج جدول المخزون الشهري. تحفظ الأرشفة كل سجلات الاستخدام والمخزون التاريخية؛ ولا يمكن الحذف إلا للقاح مؤرشف بلا سجل تاريخي."
       >
         <IconButton label="تحديث اللقاحات" onClick={vaccines.reload}>
           <RefreshCw className="h-4 w-4" />
@@ -160,20 +159,24 @@ export function VaccinesPage() {
       <Card>
         <CardHeader
           title="الكتالوج"
-          description="تظهر الأسماء والرموز في التقارير المحلية والجداول الإجمالية المنشورة. تبقى الأوصاف محلية فقط."
           action={
             <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
+              <div className="relative w-full sm:w-56">
                 <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="ابحث في الكتالوج…"
-                  className="w-56 ps-8"
+                  className="w-full ps-8"
                   aria-label="البحث في اللقاحات"
                 />
               </div>
-              <Select value={scope} onChange={(event) => setScope(event.target.value as Scope)} aria-label="حالة اللقاح">
+              <Select
+                value={scope}
+                onChange={(event) => setScope(event.target.value as Scope)}
+                aria-label="حالة اللقاح"
+                className="w-full sm:w-40"
+              >
                 <option value="all">كل اللقاحات</option>
                 <option value="active">النشطة فقط</option>
                 <option value="archived">المؤرشفة فقط</option>
@@ -188,11 +191,6 @@ export function VaccinesPage() {
           <EmptyState
             icon={<Syringe className="h-5 w-5" />}
             title={items.length === 0 ? 'لا توجد لقاحات بعد' : 'لا توجد لقاحات مطابقة لهذا العرض'}
-            description={
-              items.length === 0
-                ? 'أضف اللقاحات التي تعطيها في موقعك. يمكنك أرشفتها لاحقاً دون فقدان السجل.'
-                : 'عدّل البحث أو مرشح الحالة لعرض إدخالات كتالوج أخرى.'
-            }
             action={
               items.length === 0 ? (
                 <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={openCreate}>
@@ -266,7 +264,6 @@ export function VaccinesPage() {
         open={form !== null}
         onClose={() => setForm(null)}
         title={form?.id ? 'تعديل اللقاح' : 'إضافة لقاح'}
-        description="تُسجل تعديلات الكتالوج في سجل التدقيق. يؤدي تغيير اسم اللقاح إلى تغيير ظهوره في الجداول الحالية والتاريخية."
         size="md"
         footer={
           <>
@@ -312,7 +309,7 @@ export function VaccinesPage() {
             <Field label="الوحدة" required hint="الكميات أعداد صحيحة دائماً. استخدم وحدة مثل جرعة أو عبوة.">
               <Input
                 value={form.unit}
-                maxLength={30}
+                maxLength={20}
                 onChange={(event) => setForm({ ...form, unit: event.target.value })}
                 placeholder="جرعة"
               />

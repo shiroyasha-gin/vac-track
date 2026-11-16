@@ -223,6 +223,7 @@ func (s *VaccineService) Delete(ctx context.Context, id int64) error {
 		history, err := q.CountVaccineHistory(ctx, generated.CountVaccineHistoryParams{
 			VaccineID:   id,
 			VaccineID_2: id,
+			VaccineID_3: id,
 		})
 		if err != nil {
 			return err

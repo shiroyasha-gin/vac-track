@@ -11,7 +11,7 @@ import (
 func (a *App) Settings() (SettingsDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.adminReadyLocked(); err != nil {
 		return SettingsDTO{}, a.userError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -36,7 +36,7 @@ func (a *App) Settings() (SettingsDTO, error) {
 func (a *App) SetLowStockThreshold(threshold int64) ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.adminReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -44,7 +44,7 @@ func (a *App) SetLowStockThreshold(threshold int64) ActionResult {
 	if err := a.services.Settings.SetLowStockThreshold(ctx, threshold); err != nil {
 		return a.actionError(err)
 	}
-	return Result("Low-stock threshold saved.")
+	return Result("تم حفظ حد المخزون المنخفض.")
 }
 
 // SetPublisherEndpoint stores a validated HTTPS publishing endpoint.
@@ -53,13 +53,13 @@ func (a *App) SetPublisherEndpoint(endpoint string) ActionResult {
 	if endpoint != "" {
 		normalized, err := publishing.ValidateBaseURL(endpoint)
 		if err != nil {
-			return a.actionError(domain.NewError(domain.CodeInvalidInput, "endpoint", err.Error()))
+			return a.actionError(domain.NewError(domain.CodeInvalidInput, "endpoint", "رابط النشر غير صالح. استخدم عنوان HTTPS صالحاً."))
 		}
 		endpoint = normalized
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.adminReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -67,7 +67,7 @@ func (a *App) SetPublisherEndpoint(endpoint string) ActionResult {
 	if err := a.services.Settings.SetPublisherEndpoint(ctx, endpoint); err != nil {
 		return a.actionError(err)
 	}
-	return Result("Publishing endpoint saved.")
+	return Result("تم حفظ رابط النشر.")
 }
 
 // SetPublisherToken stores the publisher bearer token in OS-secure storage. The
@@ -75,22 +75,22 @@ func (a *App) SetPublisherEndpoint(endpoint string) ActionResult {
 func (a *App) SetPublisherToken(token string) ActionResult {
 	token = strings.TrimSpace(token)
 	if len(token) < 24 {
-		return failedResult(domain.CodeInvalidInput, "token", "Publisher token must be at least 24 characters.")
+		return failedResult(domain.CodeInvalidInput, "token", "يجب ألا يقل رمز النشر عن 24 حرفاً.")
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.adminReadyLocked(); err != nil {
 		return a.actionError(err)
 	}
 	storage, err := a.credentials.Save(publishing.PublisherAccount, token)
 	if err != nil {
 		a.logf("save publisher token", "error", err)
-		return failedResult("credential_error", "token", "The publisher token could not be stored securely. Details were written to the local application log.")
+		return failedResult("credential_error", "token", "تعذر تخزين رمز النشر بشكل آمن. كُتبت التفاصيل في سجل التطبيق المحلي.")
 	}
 	if storage == publishing.StorageOSKeyring {
-		return Result("Publisher token stored in the operating-system keychain.")
+		return Result("تم تخزين رمز النشر في سلسلة مفاتيح نظام التشغيل.")
 	}
-	return Result("Publisher token stored in a private local file because no OS keychain is available.")
+	return Result("تم تخزين رمز النشر في ملف محلي خاص لعدم توفر سلسلة مفاتيح في نظام التشغيل.")
 }
 
 // ClearPublisherToken removes the stored publisher token from all secure
@@ -98,12 +98,15 @@ func (a *App) SetPublisherToken(token string) ActionResult {
 func (a *App) ClearPublisherToken() ActionResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if err := a.adminReadyLocked(); err != nil {
+		return a.actionError(err)
+	}
 	if a.credentials == nil {
-		return failedResult("internal_error", "", "Secure credential storage is not available.")
+		return failedResult("internal_error", "", "تخزين بيانات الاعتماد الآمن غير متاح.")
 	}
 	if err := a.credentials.Delete(publishing.PublisherAccount); err != nil {
 		a.logf("delete publisher token", "error", err)
-		return failedResult("credential_error", "", "The publisher token could not be removed. Details were written to the local application log.")
+		return failedResult("credential_error", "", "تعذر حذف رمز النشر. كُتبت التفاصيل في سجل التطبيق المحلي.")
 	}
-	return Result("Publisher token removed.")
+	return Result("تم حذف رمز النشر.")
 }

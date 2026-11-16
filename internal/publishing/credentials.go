@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/zalando/go-keyring"
+
+	"vaccineshit/internal/atomicfile"
 )
 
 // ErrCredentialsNotFound means no publisher token is stored.
@@ -60,35 +62,8 @@ func (s *FileCredentialStore) Save(account, secret string) (StorageKind, error) 
 	if s.Path == "" {
 		return "", errors.New("credential fallback path is not configured")
 	}
-	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
-		return "", fmt.Errorf("create credential directory: %w", err)
-	}
-	temp, err := os.CreateTemp(filepath.Dir(s.Path), ".publisher-token-*.tmp")
-	if err != nil {
-		return "", fmt.Errorf("reserve credential file: %w", err)
-	}
-	tempPath := temp.Name()
-	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
-		temp.Close()
-		return "", fmt.Errorf("protect credential file: %w", err)
-	}
-	if _, err := temp.WriteString(strings.TrimSpace(secret)); err != nil {
-		temp.Close()
-		return "", fmt.Errorf("write credential file: %w", err)
-	}
-	if err := temp.Sync(); err != nil {
-		temp.Close()
-		return "", fmt.Errorf("sync credential file: %w", err)
-	}
-	if err := temp.Close(); err != nil {
-		return "", err
-	}
-	if err := os.Rename(tempPath, s.Path); err != nil {
+	if err := atomicfile.Write(s.Path, []byte(strings.TrimSpace(secret)), 0o600); err != nil {
 		return "", fmt.Errorf("finalize credential file: %w", err)
-	}
-	if err := os.Chmod(s.Path, 0o600); err != nil {
-		return "", fmt.Errorf("protect credential file: %w", err)
 	}
 	return StorageLocalFile, nil
 }

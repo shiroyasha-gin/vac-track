@@ -19,12 +19,11 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary:
-    'bg-emerald-500 text-emerald-950 hover:bg-emerald-400 active:bg-emerald-300 shadow-sm shadow-emerald-950/40',
-  secondary: 'bg-slate-800 text-slate-100 hover:bg-slate-700 active:bg-slate-600',
-  ghost: 'bg-transparent text-slate-300 hover:bg-slate-800/70 hover:text-slate-100',
-  danger: 'bg-rose-500/90 text-white hover:bg-rose-500 active:bg-rose-400',
-  outline: 'border border-slate-700 bg-transparent text-slate-200 hover:border-slate-500 hover:bg-slate-800/60',
+  primary: 'bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-600 shadow-sm',
+  secondary: 'bg-slate-800 text-slate-200 hover:bg-slate-700 active:bg-slate-700',
+  ghost: 'bg-transparent text-slate-300 hover:bg-slate-900 hover:text-slate-100',
+  danger: 'bg-rose-500 text-white hover:bg-rose-600 active:bg-rose-600',
+  outline: 'border border-slate-700/80 bg-slate-950 text-slate-200 hover:border-slate-600 hover:bg-slate-900',
 };
 
 const buttonSizes: Record<ButtonSize, string> = {
@@ -56,7 +55,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'focus-ring inline-flex shrink-0 items-center justify-center rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-ring inline-flex shrink-0 items-center justify-center rounded-lg font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]',
         buttonVariants[variant],
         buttonSizes[size],
         className,
@@ -82,7 +81,7 @@ export function IconButton({ label, variant = 'ghost', size = 'sm', className, c
       aria-label={label}
       title={label}
       className={cn(
-        'focus-ring inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-40',
+        'focus-ring inline-flex items-center justify-center rounded-lg transition-all duration-150 disabled:opacity-40 active:scale-95',
         variant === 'ghost' ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100' : buttonVariants[variant],
         size === 'sm' ? 'h-7 w-7' : 'h-9 w-9',
         className,
@@ -97,7 +96,7 @@ export function IconButton({ label, variant = 'ghost', size = 'sm', className, c
 /* ------------------------------------------------------------------- forms */
 
 const controlClass =
-  'w-full rounded-lg border border-slate-700/80 bg-slate-950/60 px-3 text-[13px] text-slate-100 placeholder:text-slate-500 transition-colors focus:border-emerald-400/70 focus:outline-none focus:ring-1 focus:ring-emerald-400/40 disabled:cursor-not-allowed disabled:opacity-50';
+  'w-full rounded-lg border border-slate-700/80 bg-slate-950 px-3 text-[13px] text-slate-100 shadow-sm placeholder:text-slate-500 transition-colors duration-150 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:bg-slate-900 disabled:opacity-60';
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(controlClass, 'h-9', className)} {...rest} />;
@@ -105,7 +104,7 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={cn(controlClass, 'h-9 appearance-none bg-slate-950/80', className)} {...rest}>
+    <select className={cn(controlClass, 'h-9 cursor-pointer pe-8', className)} {...rest}>
       {children}
     </select>
   );
@@ -128,15 +127,15 @@ export interface FieldProps {
 export function Field({ label, htmlFor, hint, error, required, children, className }: FieldProps) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label htmlFor={htmlFor} className="flex items-center gap-1 text-xs font-medium text-slate-300">
+      <label htmlFor={htmlFor} className="flex items-center gap-1 text-xs font-medium text-slate-200">
         {label}
-        {required && <span className="text-emerald-400">*</span>}
+        {required && <span className="text-emerald-500">*</span>}
       </label>
       {children}
       {error ? (
         <p className="text-xs text-rose-300">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-slate-500">{hint}</p>
+        <p className="text-xs leading-5 text-slate-500">{hint}</p>
       ) : null}
     </div>
   );
@@ -160,7 +159,7 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-wrap items-start justify-between gap-3 border-b border-slate-800/70 px-4 py-3.5', className)}>
+    <div className={cn('card-header flex flex-wrap items-start justify-between gap-3 border-b border-slate-700/60 px-5 py-4', className)}>
       <div>
         <h2 className="text-sm font-semibold text-slate-100">{title}</h2>
         {description ? <p className="mt-0.5 text-xs text-slate-500">{description}</p> : null}
@@ -174,16 +173,18 @@ export function PageHeader({
   title,
   description,
   children,
+  className,
 }: {
   title: string;
   description?: string;
   children?: ReactNode;
+  className?: string;
 }) {
   return (
-    <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-100">{title}</h1>
-        {description ? <p className="mt-1 max-w-3xl text-[13px] text-slate-400">{description}</p> : null}
+    <header className={cn('mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-slate-700/60 pb-5', className)}>
+      <div className="min-w-0">
+        <h1 className="text-[26px] font-semibold leading-tight text-slate-100">{title}</h1>
+        {description ? <p className="mt-1.5 max-w-3xl text-[13px] leading-6 text-slate-500">{description}</p> : null}
       </div>
       {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
     </header>
@@ -211,28 +212,29 @@ export function StatCard({
     sky: 'text-sky-300',
   }[tone];
   return (
-    <div className="card flex items-start justify-between gap-3 px-4 py-3.5">
-      <div>
-        <p className="text-[11px] font-medium text-slate-500">{label}</p>
-        <p className={cn('mt-1 text-2xl font-semibold tabular-nums', toneClass)}>{value}</p>
-        {detail ? <p className="mt-0.5 text-xs text-slate-500">{detail}</p> : null}
+    <div className="card flex items-start justify-between gap-3 px-5 py-4">
+      <div className="min-w-0">
+        <p className="text-[11.5px] font-medium text-slate-500">{label}</p>
+        <p className={cn('mt-2 text-[28px] font-semibold leading-none tabular-nums', toneClass)}>{value}</p>
+        {detail ? <p className="mt-2 text-[11px] leading-4 text-slate-500">{detail}</p> : null}
       </div>
-      {icon ? <div className="rounded-lg bg-slate-800/70 p-2 text-slate-400">{icon}</div> : null}
+      {icon ? (
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900 p-2 text-slate-400">{icon}</div>
+      ) : null}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ badges */
 
-type BadgeTone = 'slate' | 'emerald' | 'amber' | 'rose' | 'sky' | 'violet';
+type BadgeTone = 'slate' | 'emerald' | 'amber' | 'rose' | 'sky';
 
 const badgeTones: Record<BadgeTone, string> = {
-  slate: 'bg-slate-800 text-slate-300 ring-slate-700',
-  emerald: 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/30',
-  amber: 'bg-amber-500/10 text-amber-300 ring-amber-500/30',
-  rose: 'bg-rose-500/10 text-rose-300 ring-rose-500/30',
-  sky: 'bg-sky-500/10 text-sky-300 ring-sky-500/30',
-  violet: 'bg-violet-500/10 text-violet-300 ring-violet-500/30',
+  slate: 'bg-slate-900 text-slate-500 ring-slate-700',
+  emerald: 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/25',
+  amber: 'bg-amber-500/10 text-amber-300 ring-amber-500/25',
+  rose: 'bg-rose-500/10 text-rose-300 ring-rose-500/25',
+  sky: 'bg-sky-500/10 text-sky-300 ring-sky-500/25',
 };
 
 export function Badge({ tone = 'slate', children, className }: { tone?: BadgeTone; children: ReactNode; className?: string }) {
@@ -252,7 +254,7 @@ export function Badge({ tone = 'slate', children, className }: { tone?: BadgeTon
 export function StatusBadge({ state }: { state: string }) {
   switch (state) {
     case 'closed':
-      return <Badge tone="violet">مغلق</Badge>;
+      return <Badge tone="slate">مغلق</Badge>;
     case 'open':
       return <Badge tone="emerald">مفتوح</Badge>;
     case 'not_initialized':
@@ -276,14 +278,23 @@ export function Alert({
   className?: string;
 }) {
   const tones = {
-    info: 'border-sky-500/30 bg-sky-500/5 text-sky-200',
-    warning: 'border-amber-500/30 bg-amber-500/5 text-amber-100',
-    danger: 'border-rose-500/30 bg-rose-500/5 text-rose-100',
-    success: 'border-emerald-500/30 bg-emerald-500/5 text-emerald-100',
+    info: 'border-sky-500/25 bg-sky-500/[0.06]',
+    warning: 'border-amber-500/25 bg-amber-500/[0.07]',
+    danger: 'border-rose-500/25 bg-rose-500/[0.06]',
+    success: 'border-emerald-500/25 bg-emerald-500/[0.06]',
+  }[tone];
+  const titles = {
+    info: 'text-sky-300',
+    warning: 'text-amber-300',
+    danger: 'text-rose-300',
+    success: 'text-emerald-300',
   }[tone];
   return (
-    <div className={cn('rounded-xl border px-3.5 py-3 text-[13px]', tones, className)} role={tone === 'danger' ? 'alert' : undefined}>
-      {title ? <p className="mb-0.5 flex items-center gap-1.5 text-xs font-semibold">{title}</p> : null}
+    <div
+      className={cn('rounded-xl border px-3.5 py-3 text-[13px] leading-6 text-slate-200', tones, className)}
+      role={tone === 'danger' ? 'alert' : undefined}
+    >
+      {title ? <p className={cn('mb-0.5 flex items-center gap-1.5 text-xs font-semibold', titles)}>{title}</p> : null}
       {children}
     </div>
   );
@@ -301,10 +312,12 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
-      {icon ? <div className="mb-1 rounded-xl bg-slate-800/60 p-3 text-slate-400">{icon}</div> : null}
-      <p className="text-sm font-medium text-slate-200">{title}</p>
-      {description ? <p className="max-w-md text-xs text-slate-500">{description}</p> : null}
+    <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+      {icon ? (
+        <div className="mb-1 rounded-xl border border-slate-700/70 bg-slate-900 p-3.5 text-slate-400">{icon}</div>
+      ) : null}
+      <p className="text-[15px] font-semibold text-slate-200">{title}</p>
+      {description ? <p className="max-w-md text-xs leading-5 text-slate-500">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
@@ -312,7 +325,7 @@ export function EmptyState({
 
 export function Spinner({ label = 'جارٍ التحميل' }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-12 text-xs text-slate-500">
+    <div className="flex items-center justify-center gap-2 py-14 text-sm text-slate-500">
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
       {label}
     </div>
@@ -379,7 +392,7 @@ export function Modal({
   }[size];
 
   return (
-      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-500/30 p-4 backdrop-blur-sm sm:items-center">
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-[rgba(37,42,61,0.34)] p-4 backdrop-blur-sm sm:items-center animate-fade-in">
         <button
           type="button"
           aria-label="إغلاق النافذة"
@@ -393,17 +406,17 @@ export function Modal({
           aria-labelledby={titleId}
           aria-describedby={description ? descriptionId : undefined}
           className={cn(
-            'relative z-10 my-auto w-full animate-fade-in rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-slate-500/20',
+            'relative z-10 my-auto w-full animate-scale-in rounded-2xl border border-slate-700/70 bg-slate-950 shadow-floating',
             widths,
           )}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-slate-700/60 px-6 py-4">
             <div>
               <h2 id={titleId} className="text-base font-semibold text-slate-100">
                 {title}
               </h2>
               {description ? (
-                <div id={descriptionId} className="mt-1 text-xs text-slate-400">
+                <div id={descriptionId} className="mt-1 text-xs leading-5 text-slate-500">
                   {description}
                 </div>
               ) : null}
@@ -414,8 +427,8 @@ export function Modal({
               </IconButton>
             ) : null}
           </div>
-          <div className="max-h-[calc(100vh-14rem)] overflow-y-auto px-5 py-4">{children}</div>
-          {footer ? <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-800 px-5 py-3.5">{footer}</div> : null}
+          <div className="max-h-[calc(100vh-14rem)] overflow-y-auto overscroll-contain px-6 py-5">{children}</div>
+          {footer ? <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-700/60 bg-slate-900/60 px-6 py-4">{footer}</div> : null}
         </div>
       </div>
   );
@@ -480,8 +493,8 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 
 export function KeyValue({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-800/60 py-2 text-[13px] last:border-b-0">
-      <span className="text-slate-500">{label}</span>
+    <div className="flex items-start justify-between gap-4 border-b border-slate-700/50 py-2.5 text-[13px] last:border-b-0">
+      <span className="shrink-0 text-slate-500">{label}</span>
       <span className="max-w-[70%] break-words text-end text-slate-200">{children}</span>
     </div>
   );

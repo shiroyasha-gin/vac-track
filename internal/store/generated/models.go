@@ -14,6 +14,30 @@ type AppSetting struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+type Appointment struct {
+	ID            int64          `json:"id"`
+	PatientID     int64          `json:"patient_id"`
+	ScheduledOn   string         `json:"scheduled_on"`
+	ScheduledTime string         `json:"scheduled_time"`
+	Note          string         `json:"note"`
+	Status        string         `json:"status"`
+	CancelReason  string         `json:"cancel_reason"`
+	CompletedAt   sql.NullString `json:"completed_at"`
+	CancelledAt   sql.NullString `json:"cancelled_at"`
+	CreatedAt     string         `json:"created_at"`
+	UpdatedAt     string         `json:"updated_at"`
+}
+
+type AppointmentItem struct {
+	ID            int64         `json:"id"`
+	AppointmentID int64         `json:"appointment_id"`
+	VaccineID     int64         `json:"vaccine_id"`
+	Quantity      int64         `json:"quantity"`
+	UsageEntryID  sql.NullInt64 `json:"usage_entry_id"`
+	CreatedAt     string        `json:"created_at"`
+	UpdatedAt     string        `json:"updated_at"`
+}
+
 type AuditEvent struct {
 	ID         int64  `json:"id"`
 	EventType  string `json:"event_type"`
@@ -87,6 +111,17 @@ type UsageEntry struct {
 	VoidReason     string         `json:"void_reason"`
 	CreatedAt      string         `json:"created_at"`
 	UpdatedAt      string         `json:"updated_at"`
+}
+
+type User struct {
+	ID           int64  `json:"id"`
+	Username     string `json:"username"`
+	PasswordHash string `json:"password_hash"`
+	DisplayName  string `json:"display_name"`
+	Role         string `json:"role"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+	IsActive     int64  `json:"is_active"`
 }
 
 type Vaccine struct {

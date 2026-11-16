@@ -26,6 +26,7 @@ const (
 	CodeNotClosed         ErrorCode = "not_closed"
 	CodeAlreadyClosed     ErrorCode = "already_closed"
 	CodeForbidden         ErrorCode = "forbidden"
+	CodeUnauthenticated   ErrorCode = "unauthenticated"
 )
 
 // Error is a user-facing, structured validation or business-rule error.
@@ -75,6 +76,7 @@ var entityLabels = map[string]string{
 	"Patient":           "المريض",
 	"Usage entry":       "قيد الاستخدام",
 	"Monthly inventory": "المخزون الشهري",
+	"User":              "المستخدم",
 }
 
 // NotFound builds a localized not-found error for an internal entity name.
@@ -84,8 +86,4 @@ func NotFound(entity string) *Error {
 		label = entity
 	}
 	return NewError(CodeNotFound, "", "لم يتم العثور على "+label+".")
-}
-
-func notFound(entity string) *Error {
-	return NotFound(entity)
 }

@@ -8,7 +8,7 @@ import (
 func (a *App) MonthReport(month string) (MonthReportDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return MonthReportDTO{}, a.userError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -25,7 +25,7 @@ func (a *App) MonthReport(month string) (MonthReportDTO, error) {
 func (a *App) Forecast(month string) (ForecastDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.authReadyLocked(); err != nil {
 		return ForecastDTO{}, a.userError(err)
 	}
 	ctx, cancel := a.opContext()
@@ -41,7 +41,7 @@ func (a *App) Forecast(month string) (ForecastDTO, error) {
 func (a *App) AuditEvents(filter AuditFilterDTO) (AuditPageDTO, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.readyLocked(); err != nil {
+	if err := a.adminReadyLocked(); err != nil {
 		return AuditPageDTO{}, a.userError(err)
 	}
 	ctx, cancel := a.opContext()

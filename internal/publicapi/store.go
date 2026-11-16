@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"vaccineshit/internal/atomicfile"
 	"vaccineshit/internal/publishing"
 )
 
@@ -187,31 +188,7 @@ func (s *FileStore) writePublication(path string, pub Publication) error {
 	if err != nil {
 		return fmt.Errorf("encode publication: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("create publication directory: %w", err)
-	}
-	temp, err := os.CreateTemp(filepath.Dir(path), ".publication-*.tmp")
-	if err != nil {
-		return fmt.Errorf("reserve publication file: %w", err)
-	}
-	tempPath := temp.Name()
-	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
-		temp.Close()
-		return err
-	}
-	if _, err := temp.Write(body); err != nil {
-		temp.Close()
-		return err
-	}
-	if err := temp.Sync(); err != nil {
-		temp.Close()
-		return err
-	}
-	if err := temp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tempPath, path); err != nil {
+	if err := atomicfile.Write(path, body, 0o600); err != nil {
 		return fmt.Errorf("replace publication file: %w", err)
 	}
 	return nil

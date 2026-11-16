@@ -2,29 +2,144 @@
 @tailwind components;
 @tailwind utilities;
 
+/* IBM Plex Sans Arabic (SIL OFL, see assets/fonts/OFL.txt). Bundled so the
+   desktop app keeps one voice offline. */
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-400-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB,
+    U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F,
+    U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42,
+    U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B,
+    U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77,
+    U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9,
+    U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-500-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB,
+    U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F,
+    U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42,
+    U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B,
+    U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77,
+    U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9,
+    U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-600-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB,
+    U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F,
+    U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42,
+    U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B,
+    U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77,
+    U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9,
+    U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-600-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-700-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB,
+    U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F,
+    U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42,
+    U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B,
+    U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77,
+    U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9,
+    U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/plex-arabic-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @layer base {
   html {
-    @apply bg-slate-950 text-slate-100 antialiased;
+    @apply bg-slate-900 text-slate-100 antialiased;
+    color-scheme: light;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    @apply min-h-full overflow-hidden bg-slate-950 font-sans text-sm text-slate-100;
-    line-height: 1.65;
+    @apply min-h-full overflow-hidden bg-slate-900 font-sans text-sm text-slate-200;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   ::selection {
-    @apply bg-emerald-400/30 text-slate-100;
+    @apply bg-emerald-500/20 text-slate-100;
   }
 
   input[type='month']::-webkit-calendar-picker-indicator,
   input[type='date']::-webkit-calendar-picker-indicator {
     cursor: pointer;
-    opacity: 0.7;
+    opacity: 0.55;
+  }
+
+  /* The month picker overlays an Arabic label; hide only the native text so
+     the calendar indicator still works. */
+  .month-input-native::-webkit-datetime-edit {
+    color: transparent;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'],
+  progress {
+    accent-color: #1d7a52;
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: #acb0be transparent;
+    scrollbar-color: #465267 transparent;
   }
 
   *::-webkit-scrollbar {
@@ -33,28 +148,81 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: #acb0be;
+    background-color: #465267;
     border-radius: 9999px;
-    border: 3px solid transparent;
+    border: 2px solid transparent;
     background-clip: content-box;
   }
 
-  *::-webkit-scrollbar-track {
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #5a6880;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
     background: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slide-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-scale-in {
+    animation: scale-in 180ms ease-out;
+  }
+
+  .animate-slide-in-up {
+    animation: slide-in-up 200ms ease-out;
   }
 }
 
 @layer components {
   .focus-ring {
-    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
   }
 
   .card {
-    @apply rounded-2xl border border-slate-800/80 bg-slate-900/60 shadow-panel;
+    @apply rounded-xl border border-slate-700/70 bg-slate-950 shadow-panel;
   }
 
   .table-scroll {
-    @apply overflow-auto rounded-2xl border border-slate-800/80 bg-slate-900/50;
+    @apply overflow-auto rounded-xl border border-slate-700/70 bg-slate-950;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .app-scroll {
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 12px;
   }
 
   .data-table {
@@ -62,18 +230,403 @@
   }
 
   .data-table thead th {
-    @apply sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2.5 text-[11px] font-semibold text-slate-400 backdrop-blur;
+    @apply sticky top-0 z-10 border-b border-slate-700/70 bg-slate-900 px-3.5 py-2.5 text-[11px] font-semibold text-slate-500;
   }
 
   .data-table tbody td {
-    @apply border-b border-slate-800/60 px-3 py-2.5 align-middle text-slate-200;
+    @apply border-b border-slate-700/50 px-3.5 py-2.5 align-middle text-slate-200 transition-colors duration-150;
   }
 
   .data-table tbody tr:last-child td {
     @apply border-b-0;
   }
 
+  .data-table tbody tr {
+    @apply transition-colors duration-150;
+  }
+
   .data-table tbody tr:hover td {
-    @apply bg-slate-800/30;
+    @apply bg-slate-900/70;
+  }
+
+  /* Keep the identifying column visible while the day columns scroll. */
+  .data-table--sticky-first thead th:first-child {
+    @apply sticky start-0 z-20 border-e border-slate-700/70 bg-slate-900;
+  }
+
+  .data-table--sticky-first tbody td:first-child {
+    @apply sticky start-0 z-[1] border-e border-slate-700/50 bg-slate-950;
+  }
+
+  .data-table--sticky-first tbody tr:hover td:first-child {
+    @apply bg-slate-900/70;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+.print-sheet {
+  display: none;
+}
+
+/* --------------------------------------------------------------- print/pdf */
+
+@media print {
+  @page {
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  body {
+    font-size: 10pt;
+  }
+
+  /* A single report is cloned into .print-sheet; hide the live app. */
+  body.printing-sheet #root {
+    display: none !important;
+  }
+
+  .print-sheet {
+    display: block !important;
+    width: 100%;
+    padding: 0;
+    color: #111827 !important;
+  }
+
+  .print-sheet .no-print,
+  .print-sheet [data-print-hide] {
+    display: none !important;
+  }
+
+  aside,
+  header.app-chrome,
+  main > header,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  /* ---------------------------------------------------------- report header */
+
+  .print-header {
+    margin: 0 0 6mm;
+    color: #111827 !important;
+  }
+
+  .print-brand-mark {
+    display: inline-flex;
+    width: 9mm;
+    height: 9mm;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2.5mm;
+    background: #047857 !important;
+    color: #ffffff !important;
+    font-size: 12pt;
+    font-weight: 700;
+  }
+
+  .print-footer {
+    display: flex !important;
+    justify-content: space-between;
+    gap: 6mm;
+    margin-top: 5mm;
+    padding-top: 2.5mm;
+    border-top: 1px solid #cbd5e1;
+    font-size: 8.5pt;
+    color: #475569 !important;
+  }
+
+  .print-footer span {
+    color: #475569 !important;
+  }
+
+  /* --------------------------------------------------------------- surfaces */
+
+  .print-report {
+    color: #111827 !important;
+  }
+
+  .print-report .card,
+  .print-report .table-scroll {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  .print-report .card {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 2mm !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-report .card:has(.data-table) {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .print-report .card *,
+  .print-report .table-scroll * {
+    border-color: #dbe3ec !important;
+  }
+
+  .print-report .space-y-4 > * + * {
+    margin-top: 3mm !important;
+  }
+
+  .print-report .card-header {
+    padding: 2mm 2.5mm !important;
+  }
+
+  .print-report .card-header h2 {
+    font-size: 11pt !important;
+    color: #0f172a !important;
+  }
+
+  .print-report .card-header p {
+    font-size: 8.5pt !important;
+    color: #475569 !important;
+  }
+
+  /* ------------------------------------------------------- monthly summary */
+
+  .report-charts {
+    display: grid !important;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important;
+  }
+
+  .report-summary-main {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+
+  .report-summary-main > * {
+    border-bottom: 0 !important;
+  }
+
+  .report-summary-main > *:not(:last-child) {
+    border-inline-end: 1px solid #cbd5e1 !important;
+  }
+
+  .report-summary-metrics {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .report-summary-main > * {
+    padding: 2.5mm 3.5mm !important;
+  }
+
+  .report-summary-metrics > * {
+    padding: 1.5mm 3.5mm !important;
+  }
+
+  .report-summary-lead {
+    font-size: 24pt !important;
+  }
+
+  .report-summary-secondary {
+    font-size: 17pt !important;
+  }
+
+  .report-summary-metric-value {
+    font-size: 11pt !important;
+  }
+
+  /* ------------------------------------------------------- vaccine reports */
+
+  .vaccine-report .print-stat-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 2.5mm !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .vaccine-report .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .vaccine-report .card:has(.data-table) {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .vaccine-report .card .card {
+    border: 0 !important;
+  }
+
+  /* ----------------------------------------------------------------- colours */
+
+  .print-report .text-slate-100,
+  .print-report .text-slate-200,
+  .print-report .text-slate-300,
+  .print-report .text-slate-400,
+  .print-report .text-slate-500,
+  .print-report .text-slate-600,
+  .print-report .text-slate-700,
+  .print-report .text-slate-800 {
+    color: #111827 !important;
+  }
+
+  .print-report .text-emerald-300 {
+    color: #166534 !important;
+  }
+
+  .print-report .text-amber-300 {
+    color: #92400e !important;
+  }
+
+  .print-report .text-rose-300 {
+    color: #9f1239 !important;
+  }
+
+  .print-report .text-sky-300 {
+    color: #075985 !important;
+  }
+
+  .print-report .bg-slate-950,
+  .print-report .bg-slate-900 {
+    background: #ffffff !important;
+  }
+
+  .print-report .bg-slate-800 {
+    background: #e5e7eb !important;
+  }
+
+  .print-report .bg-emerald-500\/10 {
+    background: #ecfdf5 !important;
+  }
+
+  .print-report .bg-amber-500\/10,
+  .print-report .bg-amber-500\/\[0\.07\] {
+    background: #fffbeb !important;
+  }
+
+  .print-report .bg-rose-500\/10,
+  .print-report .bg-rose-500\/\[0\.06\] {
+    background: #fff1f2 !important;
+  }
+
+  .print-report .bg-sky-500\/10 {
+    background: #f0f9ff !important;
+  }
+
+  /* ------------------------------------------------------------------ tables */
+
+  .table-scroll {
+    overflow: visible !important;
+    border: 0 !important;
+  }
+
+  .print-report .table-scroll {
+    border: 0 !important;
+  }
+
+  .print-report .data-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8.5pt;
+  }
+
+  .print-report .data-table thead {
+    display: table-header-group;
+  }
+
+  .print-report .data-table thead th {
+    padding: 1.1mm 1.8mm !important;
+    border-bottom: 1.5px solid #94a3b8 !important;
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-size: 8.5pt !important;
+    font-weight: 700 !important;
+    text-align: start;
+  }
+
+  .print-report .data-table tbody td {
+    padding: 0.9mm 1.8mm !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #111827 !important;
+    font-size: 8.5pt !important;
+    vertical-align: top;
+  }
+
+  .print-report .data-table tbody tr:nth-child(even) td {
+    background: #f8fafc !important;
+  }
+
+  .print-report .data-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* ------------------------------------------------------------------ charts */
+
+  .print-report svg {
+    max-width: 100% !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-report svg text {
+    fill: #111827 !important;
+  }
+
+  .print-report svg .stroke-slate-700 {
+    stroke: #d1d5db !important;
+  }
+
+  .print-report svg .fill-slate-500 {
+    fill: #4b5563 !important;
+  }
+
+  .print-report svg .stroke-emerald-500 {
+    stroke: #1d7a52 !important;
+  }
+
+  .print-report svg .fill-emerald-500 {
+    fill: #1d7a52 !important;
+  }
+
+  .print-report svg .stroke-slate-950 {
+    stroke: #ffffff !important;
+  }
+
+  svg text {
+    fill: #111827 !important;
+  }
+
+  /* Avoid orphaned headings at the top of a page. */
+  .print-report h2,
+  .print-report h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-report .card > div:last-child:not(:first-child) {
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
+  a[href]::after {
+    content: '';
   }
 }
